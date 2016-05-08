@@ -1,5 +1,7 @@
 ; Options for the MIPS port of the compiler
 ;
+; PULP family support contributed by Eric Flamand (eflamand@iis.ee.ethz.ch) at ETH-Zurich
+;
 ; Copyright (C) 2005, 2007, 2008, 2010, 2011 Free Software Foundation, Inc.
 ;
 ; This file is part of GCC.
@@ -17,6 +19,30 @@
 ; You should have received a copy of the GNU General Public License
 ; along with GCC; see the file COPYING3.  If not see
 ; <http://www.gnu.org/licenses/>.
+
+
+HeaderInclude
+config/riscv/riscv-opts.h
+
+mcpu=
+Target RejectNegative Joined Var(Pulp_Cpu) Enum(Pulp_Processor_Type) Init(PULP_NONE)
+-mcpu=CPU       Compile code for Pulp variant CPU
+
+Enum
+Name(Pulp_Processor_Type) Type(enum Pulp_Processor_Type)
+
+EnumValue
+Enum(Pulp_Processor_Type) String(pulpv0) Value(PULP_V0)
+
+EnumValue
+Enum(Pulp_Processor_Type) String(pulpv1) Value(PULP_V1)
+
+EnumValue
+Enum(Pulp_Processor_Type) String(pulpv2) Value(PULP_V2)
+
+
+EnumValue
+Enum(Pulp_Processor_Type) String(pulpv3) Value(PULP_V3)
 
 m32
 Target RejectNegative Mask(32BIT)
@@ -89,3 +115,87 @@ Use LRA instead of reload
 mcmodel=
 Target RejectNegative Joined Var(riscv_cmodel_string)
 Use given RISC-V code model (medlow or medany)
+
+mrvstd
+Target Mask(MASK_RVSTD)
+Filter out div support when M isa is used
+
+mnohwdiv
+Target Mask(MASK_NOHWDIV)
+Disable 32 bits Hardware Division
+
+mnohwloop
+Target Mask(MASK_NOHWLOOP)
+Disable hardware loop support
+
+mnofinduct
+Target Mask(MASK_NOFINDUCT)
+Disable cost function setting to favor induction scheme
+
+msloop
+Target Mask(MASK_SLOOP)
+Use long hw loop setup instead of padding with nop for loop with insn count < 3
+
+mnopostmod
+Target Mask(MASK_NOPOSTMOD)
+Disable pointer post modification support
+
+mnoindregreg
+Target Mask(MASK_NOINDREGREG)
+Disable register offset pointer load/store
+
+mnomac
+Target Mask(MASK_NOMAC)
+Disable full 32x32 into 32 mac support
+
+mnopartmac
+Target Mask(MASK_NOPARTMAC)
+Disable 16x16 into 32 mac support
+
+mnominmax
+Target Mask(MASK_NOMINMAX)
+Disable min/max support
+
+mnoabs
+Target Mask(MASK_NOABS)
+Disable abs support
+
+mnobitop
+Target Mask(MASK_NOBITOP)
+Disable cnt/ff1/fl1 support
+
+mnosext
+Target Mask(MASK_NOSEXT)
+Disable reg to reg sign-extending instructions
+
+mnoslet
+Target Mask(MASK_NOSLET)
+Disable slet/sletu instructions
+
+mnoball
+Target Mask(MASK_NOBALL)
+Disable ball instruction
+
+mnovect
+Target Mask(MASK_NOVECT)
+Disable simd support
+
+mnoclip
+Target Mask(MASK_NOCLIP)
+Disable clip/clipu. -nominmax also disable clip/clipu
+
+mnoaddsubnormround
+Target Mask(MASK_NOADDSUBNORMROUND)
+Disable add/sub with norm and round
+
+mnomulmacnormround
+Target Mask(MASK_NOMULMACNORMROUND)
+Disable 16x16 into 32 mul/mac  with norm and round
+
+mnoshufflepack
+Target Mask(MASK_NOSHUFFLEPACK)
+Disable vector pack and shuffle support
+
+mnativeomp
+Target Mask(MASK_OPEN_NATIVE)
+Enable Native Mapping of OpenMP runtime

@@ -6390,11 +6390,49 @@ expand_omp_for_generic (struct omp_region *region,
       /* Emit code to get the next parallel iteration in L2_BB.  */
       gsi = gsi_start_bb (l2_bb);
 
-      t = build_call_expr (builtin_decl_explicit (next_fn), 2,
-			   build_fold_addr_expr (istart0),
-			   build_fold_addr_expr (iend0));
-      t = force_gimple_operand_gsi (&gsi, t, true, NULL_TREE,
-				    false, GSI_CONTINUE_LINKING);
+/* If Pulp open mp direct map
+	We generate:
+
+			t 	= __builtin_pulp_OMP_Ld_Loop_Chunk_Size();	This is funct 0
+			Start 	= __builtin_pulp_OMP_Ld_Loop_Start();		This is funct 1
+			istart0 = Start;
+			iend0 	= Start + t;
+
+      Check if (fd->iter_type == integer_type_node), if not fall back to standard expansion
+      else istart0 and iend0 are having integer_type_node and also our builtins return the same types
+	
+      t = build_call_expr (targetm.omp_target_decl(0), 0);
+      t = force_gimple_operand_gsi (&gsi, t, true, NULL_TREE, false, GSI_CONTINUE_LINKING);
+      istart0 = build_call_expr (targetm.omp_target_decl(1), 0);
+      iend0 = fold_build2 (PLUS_EXPR, fd->iter_type, istart0, t);
+	
+*/
+      if (!broken_loop &&
+	  !gimple_omp_for_combined_into_p (fd->for_stmt) &&
+	  (fd->iter_type == integer_type_node || fd->iter_type == long_integer_type_node)&&
+	  targetm.omp_target_decl(0, NULL, NULL) && targetm.omp_target_decl(1, NULL, NULL)) {
+	tree t1;
+	int Base, Index;
+	tree DeclFun;
+
+	DeclFun = targetm.omp_target_decl(0, &Base, &Index);	// Get loop chunk size
+      	t = build_call_expr (DeclFun, 2, build_int_cst (integer_ptr_type_node, Base), build_int_cst (integer_type_node, Index));
+	if (fd->iter_type != integer_type_node) t = fold_convert (fd->iter_type, t);
+      	t = force_gimple_operand_gsi (&gsi, t, true, NULL_TREE, false, GSI_CONTINUE_LINKING);
+	DeclFun = targetm.omp_target_decl(1, &Base, &Index);	// Get loop chunk Start
+      	t1 = build_call_expr (DeclFun, 2, build_int_cst (integer_ptr_type_node, Base), build_int_cst (integer_type_node, Index));
+	if (fd->iter_type != integer_type_node) t1 = fold_convert (fd->iter_type, t1);
+      	istart0 = force_gimple_operand_gsi (&gsi, t1, true, istart0, false, GSI_CONTINUE_LINKING);
+      	t1 = fold_build2 (PLUS_EXPR, fd->iter_type, istart0, t);
+      	iend0 = force_gimple_operand_gsi (&gsi, t1, true, iend0, false, GSI_CONTINUE_LINKING);
+
+      } else {
+      	t = build_call_expr (builtin_decl_explicit (next_fn), 2,
+			     build_fold_addr_expr (istart0),
+			     build_fold_addr_expr (iend0));
+      	t = force_gimple_operand_gsi (&gsi, t, true, NULL_TREE,
+				      false, GSI_CONTINUE_LINKING);
+      }
       if (TREE_TYPE (t) != boolean_type_node)
 	t = fold_build2 (NE_EXPR, boolean_type_node,
 			 t, build_int_cst (TREE_TYPE (t), 0));

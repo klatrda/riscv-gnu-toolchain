@@ -4,6 +4,8 @@
    Contributed by Andrw Waterman <waterman@cs.berkeley.edu> at UC Berkeley.
    Based on MIPS ELF support for BFD, by Ian Lance Taylor.
 
+   PULP family support contributed by Eric Flamand (eflamand@iis.ee.ethz.ch) at ETH-Zurich
+
    This file is part of BFD, the Binary File Descriptor library.
 
    This program is free software; you can redistribute it and/or modify
@@ -79,6 +81,8 @@ START_RELOC_NUMBERS (elf_riscv_reloc_type)
   RELOC_NUMBER (R_RISCV_RVC_LUI, 46)
   RELOC_NUMBER (R_RISCV_GPREL_I, 47)
   RELOC_NUMBER (R_RISCV_GPREL_S, 48)
+  RELOC_NUMBER (R_RISCV_REL12, 49)
+  RELOC_NUMBER (R_RISCV_RELU5, 50)
 END_RELOC_NUMBERS (R_RISCV_max)
 
 /* Processor specific flags for the ELF header e_flags field.  */

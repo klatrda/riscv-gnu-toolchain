@@ -2191,6 +2191,26 @@ built-in function.",
  default_expand_builtin)
 
 DEFHOOK
+(remapped_builtin,
+ "\n\
+Returns target builtin number if @var{exp} (a function call) is found to\n\
+be remapped on a target builtin, otherwise returns -1.\n\
+Setup by @code{TARGET_REMAPPED_BUILTIN}",
+ int,
+ (tree exp),
+ default_remapped_builtin)
+
+DEFHOOK
+(omp_target_decl,
+ "\n\
+Returns target builtin declaration tree number @var{t_omp_code} (int >= 0) if found\n\
+otherwise returns NULL.\n\
+Setup by @code{TARGET_OMP_TARGET_DECL}",
+ tree,
+ (int t_omp_code, int * Base, int * Index),
+ default_omp_target_decl)
+
+DEFHOOK
 (builtin_chkp_function,
  "This hook allows target to redefine built-in functions used by\n\
 Pointer Bounds Checker for code instrumentation.  Hook should return\n\

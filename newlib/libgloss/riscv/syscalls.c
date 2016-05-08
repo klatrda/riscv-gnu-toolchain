@@ -325,6 +325,7 @@ int isatty(int file)
 clock_t times(struct tms* buf)
 {
   // when called for the first time, initialize t0
+#ifdef ORIG_RISCV
   static struct timeval t0;
   if(t0.tv_sec == 0)
     gettimeofday(&t0,0);
@@ -337,6 +338,19 @@ clock_t times(struct tms* buf)
   buf->tms_stime = buf->tms_cstime = buf->tms_cutime = 0;
   
   return -1;
+#else
+#define SCALLIMM_GET_TICKS 5
+        register int  t1 asm ("a0");
+
+        asm volatile ("\tscallimm\t%1" : "=r" (t1) : "I" (SCALLIMM_GET_TICKS));
+        if (buf) {
+                buf->tms_utime = t1;
+                buf->tms_stime = 0;
+                buf->tms_cutime = t1;
+                buf->tms_cstime = 0;
+        }
+        return t1;
+#endif
 }
 
 //----------------------------------------------------------------------
@@ -433,7 +447,39 @@ long sysconf(int name)
 // on this, it is useful to have a working implementation. The following
 // is suggested by the newlib docs and suffices for a standalone
 // system.
+#ifndef PURE_RISCV
 
+#define STACK_BUFFER  65536 /* Stack Reservation */
+
+void *sbrk (ptrdiff_t incr)
+{
+  /* Symbol defined by linker map */
+  extern unsigned char _end[];              /* start of free memory (as symbol) */
+
+  /* Value set by crt0.S */
+  extern void *stack;           /* end of free memory */
+
+  /* The statically held previous end of the heap, with its initialization. */
+  static void *heap_ptr = (void *)&_end;         /* Previous end */
+
+#ifdef HEAP_DEBUG
+  syscall_errno(SYS_brk, heap_ptr, incr, stack, 0);
+#endif
+  if ((stack - (heap_ptr + incr)) > STACK_BUFFER )
+    {
+      void *base  = heap_ptr;
+      heap_ptr   += incr;
+
+      return  base;
+    }
+  else
+    {
+      errno = ENOMEM;
+      return  (void *) -1;
+    }
+}       /* _sbrk () */
+
+#else
 void* sbrk(ptrdiff_t incr)
 {
   extern unsigned char _end[]; // Defined by linker
@@ -447,6 +493,7 @@ void* sbrk(ptrdiff_t incr)
   heap_end += incr;
   return heap_end - incr;
 }
+#endif
 
 //------------------------------------------------------------------------
 // _exit                                                                

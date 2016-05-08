@@ -2174,7 +2174,15 @@ pre_edge_insert (struct edge_list *edge_list, struct gcse_expr **index_map)
 			   handling this situation.  This one is easiest for
 			   now.  */
 
-			if (eg->flags & EDGE_ABNORMAL)
+			/* if (eg->flags & EDGE_ABNORMAL) */
+			/* EF: Feb 2016.
+			    In case we have a back edge edge insert is at risk of splitting the edge, something we
+			    don't want since it block HW loop mapping.
+			    TODO: Add a target hook to check the FDS_BACK and possibly try to figure out the level of the loop
+			    in order to let gcse proceed in case the loop is very unlikely mappeable on a hw loop.
+			    Target option should also be checked.
+			*/
+			if ((eg->flags & EDGE_ABNORMAL) || (eg->flags & EDGE_DFS_BACK))
 			  insert_insn_end_basic_block (index_map[j], bb);
 			else
 			  {
@@ -2467,6 +2475,36 @@ gcse_emit_move_after (rtx dest, rtx src, rtx_insn *insn)
   return new_rtx;
 }
 
+/*
+	EF Feb 2016.
+	We don't want partial (or not) redundant expression to mess up with induction variables.
+*/
+
+static bool is_induction_scheme(rtx_insn *insn)
+
+{
+	rtx pat = single_set (insn);
+
+  	if (!pat) return false;
+
+  	if (!REG_P (SET_DEST (pat))) return false;
+
+  	if ((GET_CODE (SET_SRC (pat)) != PLUS) && (GET_CODE (SET_SRC (pat)) != MINUS)) return false;
+
+  	if (!REG_P (XEXP (SET_SRC (pat), 0))) return false;
+
+  	if  (rtx_equal_p (SET_DEST (pat), XEXP (SET_SRC (pat), 0)) ||
+  	     rtx_equal_p (SET_DEST (pat), XEXP (SET_SRC (pat), 1))) {
+		if (dump_file) {
+			fprintf(dump_file, "Detect Induction Scheme:\n");
+			print_rtl_single_with_indent(dump_file, insn, 8);
+		}
+		return true;
+	}
+	return false;
+}
+
+
 /* Delete redundant computations.
    Deletion is done by changing the insn to copy the `reaching_reg' of
    the expression into the result of the SET.  It is left to later passes
@@ -2498,13 +2536,22 @@ pre_delete (void)
 	    /* We only delete insns that have a single_set.  */
 	    if (bitmap_bit_p (pre_delete_map[bb->index], indx)
 		&& (set = single_set (insn)) != 0
-                && dbg_cnt (pre_insn))
+                && dbg_cnt (pre_insn) && !is_induction_scheme(insn))
 	      {
 		/* Create a pseudo-reg to store the result of reaching
 		   expressions into.  Get the mode for the new pseudo from
 		   the mode of the original destination pseudo.  */
+		if (expr->reaching_reg == NULL && dump_file) fprintf(dump_file, "No Reaching Reg INSN\n");
+
 		if (expr->reaching_reg == NULL)
 		  expr->reaching_reg = gen_reg_rtx_and_attrs (SET_DEST (set));
+
+		if (dump_file) {
+			fprintf(dump_file, "Reaching Reg:\n");
+			print_rtl_single_with_indent(dump_file, expr->reaching_reg, 8);
+			fprintf(dump_file, "Redundant Insn:\n");
+			print_rtl_single_with_indent(dump_file, insn, 8);
+		}
 
 		gcse_emit_move_after (SET_DEST (set), expr->reaching_reg, insn);
 		delete_insn (insn);

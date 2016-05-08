@@ -4,6 +4,8 @@
    Contributed by Andrew Waterman (waterman@cs.berkeley.edu) at UC Berkeley.
    Based on TILE-Gx and MIPS targets.
 
+   PULP family support contributed by Eric Flamand (eflamand@iis.ee.ethz.ch) at ETH-Zurich
+
    This file is part of BFD, the Binary File Descriptor library.
 
    This program is free software; you can redistribute it and/or modify
@@ -1487,6 +1489,13 @@ perform_relocation (const reloc_howto_type *howto,
       value = ENCODE_UTYPE_IMM (RISCV_CONST_HIGH_PART (value));
       break;
 
+    case R_RISCV_REL12:
+      value = ENCODE_ITYPE_IMM (value>>howto->rightshift);
+      break;
+    case R_RISCV_RELU5:
+      value = ENCODE_I1TYPE_UIMM (value>>howto->rightshift);
+      break;
+
     case R_RISCV_LO12_I:
     case R_RISCV_GPREL_I:
     case R_RISCV_TPREL_LO12_I:
@@ -1814,6 +1823,8 @@ riscv_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 	case R_RISCV_RVC_LUI:
 	case R_RISCV_LO12_I:
 	case R_RISCV_LO12_S:
+        case R_RISCV_RELU5:
+        case R_RISCV_REL12:
 	  /* These require no special handling beyond perform_relocation.  */
 	  break;
 

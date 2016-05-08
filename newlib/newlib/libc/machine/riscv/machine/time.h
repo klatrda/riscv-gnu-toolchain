@@ -1,6 +1,6 @@
 #ifndef _RISCV_MACHINE_TIME_H
 #define _RISCV_MACHINE_TIME_H
 
-#define _CLOCKS_PER_SEC_ 1000000
+#define _CLOCKS_PER_SEC_ 100000
 
 #endif

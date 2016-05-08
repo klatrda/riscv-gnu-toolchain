@@ -4,6 +4,8 @@
    Contributed by Andrew Waterman (waterman@cs.berkeley.edu) at UC Berkeley.
    Based on MIPS target.
 
+   PULP family support contributed by Eric Flamand (eflamand@iis.ee.ethz.ch) at ETH-Zurich
+
    This file is part of the GNU opcodes library.
 
    This library is free software; you can redistribute it and/or modify
@@ -30,6 +32,8 @@
 
 #include <stdint.h>
 #include <ctype.h>
+#include <stdio.h>
+
 
 struct riscv_private_data
 {
@@ -44,6 +48,119 @@ static const char * const *riscv_fpr_names;
 /* Other options */
 static int no_aliases;	/* If set disassemble as most general inst.  */
 
+struct riscv_subset
+{
+  const char *name;
+  int version_major;
+  int version_minor;
+
+  struct riscv_subset *next;
+};
+
+static struct riscv_subset *riscv_subsets;
+
+static void
+riscv_add_subset (const char *subset)
+{
+  struct riscv_subset *s = xmalloc (sizeof *s);
+  s->name = xstrdup (subset);
+  s->version_major = 1;
+  s->version_minor = 0;
+  s->next = riscv_subsets;
+  riscv_subsets = s;
+}
+
+static void
+riscv_set_arch (const char *arg)
+{
+  char *uppercase = xstrdup (arg);
+  char *p = uppercase;
+  const char *all_subsets = "IMAFDC";
+  const char *extension = NULL;
+  int rvc = 0;
+  int i;
+
+  for (i = 0; uppercase[i]; i++) uppercase[i] = toupper (uppercase[i]);
+
+  if (strncmp (p, "RV32", 4) == 0)
+    {
+      p += 4;
+    }
+  else if (strncmp (p, "RV64", 4) == 0)
+    {
+      p += 4;
+    }
+  else if (strncmp (p, "RV", 2) == 0)
+    p += 2;
+
+  switch (*p)
+    {
+      case 'I':
+        break;
+
+      case 'G':
+        p++;
+        /* Fall through.  */
+
+      case '\0':
+        for (i = 0; all_subsets[i] != '\0'; i++)
+          {
+            const char subset[] = {all_subsets[i], '\0'};
+            riscv_add_subset (subset);
+          }
+        break;
+
+      default:
+        fprintf (stderr, "`I' must be the first ISA subset name specified (got %c). Ignoring -march", *p);
+	riscv_subsets=NULL;
+	return;
+    }
+
+  while (*p)
+    {
+      if (*p == 'X')
+        {
+          char *subset = xstrdup (p), *q = subset;
+
+          while (*++q != '\0' && *q != '_')
+            ;
+          *q = '\0';
+
+          if (extension) {
+		fprintf (stderr, "only one eXtension is supported (found %s and %s). Ignoring -march", extension, subset);
+		riscv_subsets=NULL;
+		return;
+	  }
+          extension = subset;
+          riscv_add_subset (subset);
+          p += strlen (subset);
+          free (subset);
+        }
+      else if (*p == '_')
+        p++;
+      else if ((all_subsets = strchr (all_subsets, *p)) != NULL)
+        {
+          const char subset[] = {*p, 0};
+          riscv_add_subset (subset);
+          if (*p == 'C')
+            rvc = 1;
+          all_subsets++;
+          p++;
+        }
+      else {
+        fprintf(stderr, "unsupported ISA subset %c. Ignoring -march", *p);
+	riscv_subsets=NULL;
+	return;
+      }
+    }
+
+  if (!rvc)
+    /* Add RVC anyway.  -m[no-]rvc toggles its availability.  */
+    riscv_add_subset ("C");
+
+  free (uppercase);
+}
+
 static void
 set_default_riscv_dis_options (void)
 {
@@ -53,8 +170,9 @@ set_default_riscv_dis_options (void)
 }
 
 static void
-parse_riscv_dis_option (const char *option)
+parse_riscv_dis_option (char *option)
 {
+  const char *where=NULL;
   if (CONST_STRNEQ (option, "no-aliases"))
     no_aliases = 1;
   else if (CONST_STRNEQ (option, "numeric"))
@@ -62,7 +180,21 @@ parse_riscv_dis_option (const char *option)
       riscv_gpr_names = riscv_gpr_names_numeric;
       riscv_fpr_names = riscv_fpr_names_numeric;
     }
-  else
+  else if ((where = strstr(option, "-march="))&&(where==option)) {
+	char *comma;
+	where = option+7;
+	comma = strstr(where, ",");
+	if (comma) *comma = '\0';
+	riscv_set_arch(where);
+	if (comma) *comma = ',';
+  } else if ((where = strstr(option, "march="))&&(where==option)) {
+	char *comma;
+	where = option+6;
+	comma = strstr(where, ",");
+	if (comma) *comma = '\0';
+	riscv_set_arch(where);
+	if (comma) *comma = ',';
+  } else
     {
       /* Invalid option.  */
       fprintf (stderr, _("Unrecognized disassembler option: %s\n"), option);
@@ -229,6 +361,7 @@ print_insn_args (const char *d, insn_t l, bfd_vma pc, disassemble_info *info)
 	  break;
 
 	case ',':
+        case '!':
 	case '(':
 	case ')':
 	case '[':
@@ -243,9 +376,39 @@ print_insn_args (const char *d, insn_t l, bfd_vma pc, disassemble_info *info)
 	  break;
 
 	case 'b':
+          if (d[1]=='1') {
+	     info->target = (EXTRACT_ITYPE_IMM (l)<<1) + pc; ++d;
+	     (*info->print_address_func) (info->target, info);
+	  } else if (d[1]=='2') {
+	     info->target = (EXTRACT_I1TYPE_UIMM (l)<<1) + pc; ++d;
+	     (*info->print_address_func) (info->target, info);
+          } else if (d[1]=='3') {
+	     print (info->stream, "%d", (int) EXTRACT_I1TYPE_UIMM (l)); ++d;
+          } else if (d[1]=='5') {
+	     print (info->stream, "%d", ((int) EXTRACT_I5TYPE_UIMM (l))&0x1F); ++d;
+          } else if (d[1]=='i') {
+	     print (info->stream, "%d", ((int) EXTRACT_I5_1_TYPE_UIMM (l))&0x1F); ++d;
+	  } else if (d[1]=='s') {
+	     print (info->stream, "%d", ((int) EXTRACT_I6TYPE_IMM (l)<<26)>>26); ++d;
+	  } else if (d[1]=='u') {
+	     print (info->stream, "%d", ((int) EXTRACT_I6TYPE_IMM (l))&0x1F); ++d;
+	  } else if (d[1]=='U') {
+	     print (info->stream, "%d", ((int) EXTRACT_I6TYPE_IMM (l))&0x0F); ++d;
+	  } else if (d[1]=='f') {
+	     print (info->stream, "%d", ((int) EXTRACT_I6TYPE_IMM (l))&0x01); ++d;
+	  } else if (d[1]=='F') {
+	     print (info->stream, "%d", ((int) EXTRACT_I6TYPE_IMM (l))&0x03); ++d;
+	  } else (*info->print_address_func) (info->target, info);
+          break;
 	case 's':
 	  print (info->stream, "%s", riscv_gpr_names[rs1]);
 	  break;
+
+        case 'r':
+          print (info->stream, "%s",
+                 riscv_gpr_names[EXTRACT_OPERAND (RS3I, l)]);
+          break;
+
 
 	case 't':
 	  print (info->stream, "%s",
@@ -275,6 +438,11 @@ print_insn_args (const char *d, insn_t l, bfd_vma pc, disassemble_info *info)
 	case 'o':
 	  maybe_print_address (pd, rs1, EXTRACT_ITYPE_IMM (l));
 	case 'j':
+	  if (d[1]=='i') {
+             ++d;
+	     print (info->stream, "%d", (int) EXTRACT_ITYPE_IMM (l));
+	     break;
+	  }
 	  if ((l & MASK_ADDI) == MATCH_ADDI || (l & MASK_JALR) == MATCH_JALR)
 	    maybe_print_address (pd, rs1, EXTRACT_ITYPE_IMM (l));
 	  print (info->stream, "%d", (int) EXTRACT_ITYPE_IMM (l));
@@ -302,7 +470,10 @@ print_insn_args (const char *d, insn_t l, bfd_vma pc, disassemble_info *info)
 	    pd->hi_addr[rd] = EXTRACT_UTYPE_IMM (l);
 	  else if ((l & MASK_C_LUI) == MATCH_C_LUI)
 	    pd->hi_addr[rd] = EXTRACT_RVC_LUI_IMM (l);
-	  print (info->stream, "%s", riscv_gpr_names[rd]);
+          if (d[1]=='i') {
+             ++d;
+             print (info->stream, "x%d", (int) rd);
+          } else print (info->stream, "%s", riscv_gpr_names[rd]);
 	  break;
 
 	case 'z':
@@ -364,6 +535,25 @@ print_insn_args (const char *d, insn_t l, bfd_vma pc, disassemble_info *info)
     }
 }
 
+static bfd_boolean
+riscv_subset_supports (const char *feature)
+{
+  struct riscv_subset *s;
+  char *p;
+  // unsigned xlen_required;
+
+  if (!riscv_subsets) return TRUE;
+  (void) strtoul (feature, &p, 10);
+
+  for (s = riscv_subsets; s != NULL; s = s->next)
+    if (strcasecmp (s->name, p) == 0)
+      /* FIXME: once we support version numbers:
+         return major == s->version_major && minor <= s->version_minor; */
+      return TRUE;
+
+  return FALSE;
+}
+
 /* Print the RISC-V instruction at address MEMADDR in debugged memory,
    on using INFO.  Returns length of the instruction, in bytes.
    BIGENDIAN must be 1 if this is big-endian code, 0 if
@@ -384,8 +574,10 @@ riscv_disassemble_insn (bfd_vma memaddr, insn_t word, disassemble_info *info)
   if (! init)
     {
       for (op = riscv_opcodes; op < &riscv_opcodes[NUMOPCODES]; op++)
-	if (!riscv_hash[OP_HASH_IDX (op->match)])
-	  riscv_hash[OP_HASH_IDX (op->match)] = op;
+	if (riscv_subset_supports (op->subset)) {
+		if (!riscv_hash[OP_HASH_IDX (op->match)])
+	  		riscv_hash[OP_HASH_IDX (op->match)] = op;
+	}
 
       init = 1;
     }
@@ -433,6 +625,9 @@ riscv_disassemble_insn (bfd_vma memaddr, insn_t word, disassemble_info *info)
 
       for (; op < &riscv_opcodes[NUMOPCODES]; op++)
 	{
+	  /* Is the isa subset of this instruction supported? */
+	  if (!riscv_subset_supports (op->subset)) 
+ 	    continue;
 	  /* Does the opcode match?  */
 	  if (! (op->match_func) (op, word))
 	    continue;
@@ -510,11 +705,13 @@ The following RISC-V-specific disassembler options are supported for use\n\
 with the -M switch (multiple options should be separated by commas):\n"));
 
   fprintf (stream, _("\n\
-  numeric       Print numeric reigster names, rather than ABI names.\n"));
+  numeric           Print numeric register names, rather than ABI names.\n"));
 
   fprintf (stream, _("\n\
-  no-aliases    Disassemble only into canonical instructions, rather\n\
-                than into pseudoinstructions.\n"));
+  no-aliases        Disassemble only into canonical instructions, rather\n\
+                    than into pseudoinstructions.\n"));
+  fprintf (stream, _("\n\
+  march=ISA string Uses string to select riscv ISA subsets.\n"));
 
   fprintf (stream, _("\n"));
 }

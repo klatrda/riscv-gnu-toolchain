@@ -5976,7 +5976,16 @@ expand_builtin (tree exp, rtx target, rtx subtarget, machine_mode mode,
   int flags;
 
   if (DECL_BUILT_IN_CLASS (fndecl) == BUILT_IN_MD)
-    return targetm.expand_builtin (exp, target, subtarget, mode, ignore);
+    	return targetm.expand_builtin (exp, target, subtarget, mode, ignore);
+  else if (targetm.remapped_builtin (exp) != -1) 
+    	return targetm.expand_builtin (exp, target, subtarget, mode, ignore);
+/*
+	if (fcode == BUILT_IN_GOMP_BARRIER ||
+	    fcode == BUILT_IN_GOMP_CRITICAL_START ||
+	    fcode == BUILT_IN_GOMP_CRITICAL_END) {
+    		return targetm.expand_builtin (exp, target, subtarget, mode, ignore);
+	}
+*/
 
   /* When ASan is enabled, we don't want to expand some memory/string
      builtins and rely on libsanitizer's hooks.  This allows us to avoid
@@ -10900,6 +10909,20 @@ validate_gimple_arglist (const gcall *call, ...)
   va_end (ap);
 
   return res;
+}
+
+/* Default target specific builtin remapper */
+int
+default_remapped_builtin(tree exp ATTRIBUTE_UNUSED)
+{
+	return -1;
+}
+
+/* Default target specific builtin omp_target_decl */
+tree
+default_omp_target_decl(int t_omp_code ATTRIBUTE_UNUSED, int *Base ATTRIBUTE_UNUSED, int *Index ATTRIBUTE_UNUSED)
+{
+	return NULL;
 }
 
 /* Default target-specific builtin expander that does nothing.  */

@@ -4,6 +4,8 @@
    Contributed by Andrew Waterman (waterman@cs.berkeley.edu) at UC Berkeley.
    Based on MIPS target.
 
+   PULP family support contributed by Eric Flamand (eflamand@iis.ee.ethz.ch) at ETH-Zurich
+
    This file is part of GAS.
 
    GAS is free software; you can redistribute it and/or modify

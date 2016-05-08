@@ -3,6 +3,8 @@
    Contributed by Andrew Waterman (waterman@cs.berkeley.edu) at UC Berkeley.
    Based on MIPS target for GNU compiler.
 
+   PULP family support contributed by Eric Flamand (eflamand@iis.ee.ethz.ch) at ETH-Zurich
+
 This file is part of GCC.
 
 GCC is free software; you can redistribute it and/or modify
@@ -24,3 +26,4 @@ FLOAT_MODE (TF, 16, ieee_quad_format);
 /* Vector modes.  */
 VECTOR_MODES (INT, 4);        /*       V8QI V4HI V2SI */
 VECTOR_MODES (FLOAT, 4);      /*            V4HF V2SF */
+VECTOR_MODE  (INT, QI, 2);    /*                 V2QI */

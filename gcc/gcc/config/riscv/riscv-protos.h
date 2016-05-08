@@ -3,6 +3,8 @@
    Contributed by Andrew Waterman (waterman@cs.berkeley.edu) at UC Berkeley.
    Based on MIPS target for GNU compiler.
 
+   PULP family support contributed by Eric Flamand (eflamand@iis.ee.ethz.ch) at ETH-Zurich
+
 This file is part of GCC.
 
 GCC is free software; you can redistribute it and/or modify
@@ -57,10 +59,35 @@ extern bool riscv_split_64bit_move_p (rtx, rtx);
 extern void riscv_split_doubleword_move (rtx, rtx);
 extern const char *riscv_output_move (rtx, rtx);
 extern const char *riscv_output_gpr_save (unsigned);
+extern const char *riscv_explicit_load_store(rtx AddrReg, rtx SrcReg, unsigned int Address, int IsLoad);
+
 #ifdef RTX_CODE
+extern void riscv_init_expanders (void);
 extern void riscv_expand_scc (rtx *);
 extern void riscv_expand_conditional_branch (rtx *);
+
+
+extern int  riscv_replicated_const_vector (rtx op, int min_val, int max_val);
+
+extern rtx  riscv_to_int_mode (rtx);
+extern void riscv_expand_vector_init(rtx target, rtx vals);
+
+extern int  riscv_valid_norm_round_imm_op(rtx norm_oper, rtx round_oper);
+extern int  riscv_bit_size_for_clip (HOST_WIDE_INT i);
+extern bool riscv_valid_clip_operands (rtx ux, rtx lx, int sign);
+extern bool riscv_valid_bit_field_imm_operand(rtx x, rtx shift_op, int Set_Mode, int *Size, int *Offset);
+extern int  riscv_valid_bit_insert(rtx op1, rtx op2, rtx op3, int *Len, int *Off);
+
+extern int  riscv_bitmask (unsigned HOST_WIDE_INT, int *, enum machine_mode);
+extern bool riscv_bitmask_p (unsigned HOST_WIDE_INT);
+extern bool riscv_bitmask_ins_p (unsigned HOST_WIDE_INT, int, enum machine_mode);
+extern bool riscv_bottom_bitmask_p (unsigned HOST_WIDE_INT);
+
+extern bool riscv_valid_permute_operands(rtx op1, rtx op2, rtx sel);
 #endif
+
+extern void riscv_hardware_loop (void);
+extern int riscv_epilogue_uses(int regno);
 extern rtx riscv_expand_call (bool, rtx, rtx, rtx);
 extern void riscv_expand_fcc_reload (rtx, rtx, rtx);
 extern void riscv_set_return_address (rtx, rtx);
@@ -92,5 +119,7 @@ extern const char *current_section_name (void);
 extern unsigned int current_section_flags (void);
 
 extern void riscv_expand_vector_init (rtx, rtx);
+
+extern bool riscv_filter_pulp_operand(rtx, bool);
 
 #endif /* ! GCC_RISCV_PROTOS_H */

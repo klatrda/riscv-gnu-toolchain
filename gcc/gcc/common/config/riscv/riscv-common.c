@@ -75,12 +75,58 @@ riscv_parse_arch_string (const char *isa, int *flags)
   *flags &= ~MASK_RVC;
   if (*p == 'C')
     *flags |= MASK_RVC, p++;
-
   /* FIXME: For now we just stop parsing when faced with a
      non-standard RISC-V ISA extension, partially becauses of a
      problem with the naming scheme. */
-  if (*p == 'X')
-    return;
+  if (*p == 'X') {
+  	if (strncmp (p, "Xpulpv0", 7) == 0) {
+		p+=7;
+    		*flags |= MASK_32BIT;
+  		*flags &= ~MASK_MULDIV;
+  		*flags &= ~MASK_ATOMIC;
+  		*flags |= MASK_SOFT_FLOAT_ABI;
+		if (Pulp_Cpu == PULP_NONE || Pulp_Cpu == PULP_V0) Pulp_Cpu = PULP_V0;
+		else error("-Xpulpv0: pulp architecture is already defined");
+  	} else if (strncmp (p, "Xpulpv1", 7) == 0) {
+		p+=7;
+    		*flags |= MASK_32BIT;
+  		*flags &= ~MASK_MULDIV;
+  		*flags &= ~MASK_ATOMIC;
+  		*flags |= MASK_SOFT_FLOAT_ABI;
+		if (Pulp_Cpu == PULP_NONE || Pulp_Cpu == PULP_V1) Pulp_Cpu = PULP_V1;
+		else error("-Xpulpv1: pulp architecture is already defined");
+	} else if (strncmp (p, "Xpulpv2", 7) == 0) {
+		p+=7;
+    		*flags |= MASK_32BIT;
+  		*flags &= ~MASK_MULDIV;
+  		*flags &= ~MASK_ATOMIC;
+  		*flags |= MASK_SOFT_FLOAT_ABI;
+		if (Pulp_Cpu == PULP_NONE || Pulp_Cpu == PULP_V2) Pulp_Cpu = PULP_V2;
+		else error("-Xpulpv2: pulp architecture is already defined");
+	} else if (strncmp (p, "Xpulpv3", 7) == 0) {
+		p+=7;
+    		*flags |= MASK_32BIT;
+  		*flags |= MASK_MULDIV;
+  		*flags &= ~MASK_ATOMIC;
+  		*flags |= MASK_SOFT_FLOAT_ABI;
+		if (Pulp_Cpu == PULP_NONE || Pulp_Cpu == PULP_V3) Pulp_Cpu = PULP_V3;
+		else error("-Xpulpv3: pulp architecture is already defined");
+	} else {
+      		error ("-march=%s: unsupported ISA substring %s", isa, p);
+		return;
+	}
+  } else {
+	if (Pulp_Cpu != PULP_NONE) {
+    		*flags |= MASK_32BIT;
+  		*flags |= MASK_SOFT_FLOAT_ABI;
+  		*flags &= ~MASK_ATOMIC;
+		if (Pulp_Cpu >= PULP_V3)  {
+  			*flags |= MASK_MULDIV;
+		} else {
+  			*flags &= ~MASK_MULDIV;
+		}
+	}
+  }
 
   if (*p)
     {
@@ -110,7 +156,9 @@ riscv_handle_option (struct gcc_options *opts,
     case OPT_march_:
       riscv_parse_arch_string (decoded->arg, &opts->x_target_flags);
       return true;
-
+    case OPT_mcpu_:
+	error("Use -march to pass pulp cpu info and not -mcpu");
+	return true;
     default:
       return true;
     }
@@ -121,7 +169,7 @@ static const struct default_options riscv_option_optimization_table[] =
   {
     { OPT_LEVELS_1_PLUS, OPT_fsection_anchors, NULL, 1 },
     { OPT_LEVELS_1_PLUS, OPT_fomit_frame_pointer, NULL, 1 },
-    { OPT_LEVELS_SIZE, OPT_msave_restore, NULL, 1 },
+    { OPT_LEVELS_1_PLUS, OPT_funsafe_loop_optimizations, NULL, 1 },
     { OPT_LEVELS_NONE, 0, NULL, 0 }
   };
 

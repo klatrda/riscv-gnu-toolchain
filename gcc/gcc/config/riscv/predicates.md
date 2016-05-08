@@ -3,6 +3,8 @@
 ;; Contributed by Andrew Waterman (waterman@cs.berkeley.edu) at UC Berkeley.
 ;; Based on MIPS target for GNU compiler.
 ;;
+;; PULP family support contributed by Eric Flamand (eflamand@iis.ee.ethz.ch) at ETH-Zurich
+;;
 ;; This file is part of GCC.
 ;;
 ;; GCC is free software; you can redistribute it and/or modify
@@ -18,6 +20,25 @@
 ;; You should have received a copy of the GNU General Public License
 ;; along with GCC; see the file COPYING3.  If not see
 ;; <http://www.gnu.org/licenses/>.
+
+;; Return nonzero if OP is a LC register.
+(define_predicate "lc_register_operand"
+  (and (match_code "reg")
+       (match_test "REGNO (op) == REG_LC0 || REGNO (op) == REG_LC1")))
+
+;; Return nonzero if OP is a LE register.
+(define_predicate "le_register_operand"
+  (and (match_code "reg")
+       (match_test "REGNO (op) == REG_LE0 || REGNO (op) == REG_LE1")))
+
+;; Return nonzero if OP is a LS register.
+(define_predicate "ls_register_operand"
+  (and (match_code "reg")
+       (match_test "REGNO (op) == REG_LS0 || REGNO (op) == REG_LS1")))
+
+(define_predicate "permute_sel_operand"
+  (ior (match_code "reg")
+       (match_code "const_vector")))
 
 (define_predicate "const_arith_operand"
   (and (match_code "const_int")
@@ -43,6 +64,14 @@
   (ior (match_operand 0 "const_0_operand")
        (match_operand 0 "register_operand")))
 
+(define_predicate "reg_or_0_or_m1_operand"
+  (ior (ior (match_operand 0 "const_0_operand")
+            (and (match_test "(Pulp_Cpu>=PULP_V2)")
+                 (and (match_code "const_int")
+	              (match_test "op == CONSTM1_RTX (GET_MODE (op))"))))
+       (match_operand 0 "register_operand"))
+)
+
 (define_predicate "const_1_operand"
   (and (match_code "const_int,const_double,const_vector")
        (match_test "op == CONST1_RTX (GET_MODE (op))")))
@@ -65,6 +94,28 @@
 (define_special_predicate "pc_or_label_operand"
   (match_code "pc,label_ref"))
 
+(define_special_predicate "vec_comparison_operator" (match_code "eq,ne,le,lt,gt,ge,leu,ltu,gtu,geu"))
+
+(define_predicate "reg_or_sci_const"
+  (ior (match_operand 0 "register_operand")
+       (match_code "const_vector"))
+{
+	if (GET_CODE (op) == CONST_VECTOR) {
+		return riscv_replicated_const_vector(op, -32, 31);
+	} else return true;
+}
+)
+
+(define_predicate "reg_or_sciu_const"
+  (ior (match_operand 0 "register_operand")
+       (match_code "const_vector"))
+{
+	if (GET_CODE (op) == CONST_VECTOR) {
+		return riscv_replicated_const_vector(op, 0, 63);
+	} else return true;
+}
+)
+
 ;; A legitimate CONST_INT operand that takes more than one instruction
 ;; to load.
 (define_predicate "splittable_const_int_operand"
@@ -79,6 +130,13 @@
      instruction.  */
   return !LUI_INT (op) && !SMALL_INT (op);
 })
+
+(define_predicate "nonimmediate_operand_exclude_post"
+  (match_operand 0 "nonimmediate_operand")
+{
+   return (!riscv_filter_pulp_operand(op, !(Pulp_Cpu>=PULP_V0)));
+}
+)
 
 (define_predicate "move_operand"
   (match_operand 0 "general_operand")
@@ -179,6 +237,12 @@
 
 (define_predicate "order_operator"
   (match_code "eq,ne,lt,ltu,le,leu,ge,geu,gt,gtu"))
+
+(define_predicate "order_operator_eq"
+  (match_code "eq"))
+
+(define_predicate "order_operator_wo_eq"
+  (match_code "ne,lt,ltu,le,leu,ge,geu,gt,gtu"))
 
 (define_predicate "fp_order_operator"
   (match_code "eq,lt,le,gt,ge"))

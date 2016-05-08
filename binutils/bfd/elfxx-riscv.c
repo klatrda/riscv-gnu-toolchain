@@ -4,6 +4,8 @@
    Contributed by Andrew Waterman (waterman@cs.berkeley.edu) at UC Berkeley.
    Based on TILE-Gx and MIPS targets.
 
+   PULP family support contributed by Eric Flamand (eflamand@iis.ee.ethz.ch) at ETH-Zurich
+
    This file is part of BFD, the Binary File Descriptor library.
 
    This program is free software; you can redistribute it and/or modify
@@ -719,6 +721,36 @@ static reloc_howto_type howto_table[] =
 	 0,				/* src_mask */
 	 ENCODE_STYPE_IMM (-1U),	/* dst_mask */
 	 FALSE),			/* pcrel_offset */
+
+  /* 12-bit PC-relative offset, for hwloop.  */
+  HOWTO (R_RISCV_REL12,			/* type */
+	 1,				/* rightshift */
+	 2,				/* size */
+	 32,				/* bitsize, should be 12 but riscv use this field in a non std way */
+	 TRUE,				/* pc_relative */
+	 0,				/* bitpos */
+	 complain_overflow_unsigned,	/* complain_on_overflow */
+	 bfd_elf_generic_reloc,		/* special_function */
+	 "R_RISCV_REL12",		/* name */
+	 FALSE,				/* partial_inplace */
+	 0,				/* src_mask */
+	 ENCODE_ITYPE_IMM (-1U),	/* dst_mask */
+	 TRUE),				/* pcrel_offset */
+
+  /* Unsigned 5-bit PC-relative offset, for hwloop.  */
+  HOWTO (R_RISCV_RELU5,			/* type */
+	 1,				/* rightshift */
+	 1,				/* size */
+	 32,				/* bitsize, should be 5 but riscv use this field in a non std way */
+	 TRUE,				/* pc_relative */
+	 0,				/* bitpos */
+	 complain_overflow_unsigned,	/* complain_on_overflow */
+	 bfd_elf_generic_reloc,		/* special_function */
+	 "R_RISCV_RELU5",		/* name */
+	 FALSE,				/* partial_inplace */
+	 0,				/* src_mask */
+	 ENCODE_I1TYPE_UIMM (-1U),	/* dst_mask */
+	 TRUE),				/* pcrel_offset */
 };
 
 /* A mapping from BFD reloc types to RISC-V ELF reloc types.  */
@@ -771,6 +803,8 @@ static const struct elf_reloc_map riscv_reloc_map[] =
   { BFD_RELOC_RISCV_RVC_LUI, R_RISCV_RVC_LUI },
   { BFD_RELOC_RISCV_GPREL_I, R_RISCV_GPREL_I },
   { BFD_RELOC_RISCV_GPREL_S, R_RISCV_GPREL_S },
+  { BFD_RELOC_RISCV_REL12, R_RISCV_REL12 },
+  { BFD_RELOC_RISCV_RELU5, R_RISCV_RELU5 },
 };
 
 /* Given a BFD reloc type, return a howto structure.  */

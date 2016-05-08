@@ -3,6 +3,9 @@
 ;; Contributed by Andrew Waterman (waterman@cs.berkeley.edu) at UC Berkeley.
 ;; Based on MIPS target for GNU compiler.
 ;;
+;; PULP family support contributed by Eric Flamand (eflamand@iis.ee.ethz.ch) at ETH-Zurich
+;;
+;;
 ;; This file is part of GCC.
 ;;
 ;; GCC is free software; you can redistribute it and/or modify
@@ -21,6 +24,22 @@
 
 ;; Register constraints
 
+;;
+(define_register_constraint "a" "(Pulp_Cpu==PULP_V0) ? GR_REGS : NO_REGS"
+  "gp reg if pulpv1, empty otherwise")
+
+;; HW Loop register constraints, loop end
+(define_register_constraint "t" "LE_REGS"
+  "LE0 or LE1.")
+
+;; HW Loop register constraints, loop start
+(define_register_constraint "u" "LS_REGS"
+  "LS0 or LS1.")
+
+;; HW Loop register constraints, loop counter
+(define_register_constraint "k" "LC_REGS"
+  "LC0 or LC1.")
+
 (define_register_constraint "f" "TARGET_HARD_FLOAT ? FP_REGS : NO_REGS"
   "A floating-point register (if available).")
 
@@ -34,6 +53,7 @@
   "@internal")
 
 ;; Integer constraints
+
 
 (define_constraint "Z"
   "@internal"
@@ -91,3 +111,21 @@
    A vector zero."
   (and (match_code "const_vector")
        (match_test "op == CONST0_RTX (mode)")))
+
+(define_constraint "YM"
+  "@internal"
+  (and (match_test "(Pulp_Cpu>=PULP_V2)")
+       (and (match_code "const_int")
+            (match_test "op == CONSTM1_RTX (mode)"))))
+
+(define_constraint "vIsdc"
+  "A constant vector with identical elements in [-32..31]"
+   (and (match_code "const_vector")
+        (match_test "riscv_replicated_const_vector(op, -32, 31)")))
+
+(define_constraint "vIusc"
+  "A constant vector with identical elements in [0..63]"
+   (and (match_code "const_vector")
+        (match_test "riscv_replicated_const_vector(op, 0, 63)")))
+
+

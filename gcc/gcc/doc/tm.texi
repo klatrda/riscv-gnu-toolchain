@@ -10961,6 +10961,20 @@ ignored.  This function should return the result of the call to the
 built-in function.
 @end deftypefn
 
+@deftypefn {Target Hook} int TARGET_REMAPPED_BUILTIN (tree @var{exp})
+
+Returns target builtin number if @var{exp} (a function call) is found to
+be remapped on a target builtin, otherwise returns -1.
+Setup by @code{TARGET_REMAPPED_BUILTIN}
+@end deftypefn
+
+@deftypefn {Target Hook} tree TARGET_OMP_TARGET_DECL (int @var{t_omp_code}, int * @var{Base}, int * @var{Index})
+
+Returns target builtin declaration tree number @var{t_omp_code} (int >= 0) if found
+otherwise returns NULL.
+Setup by @code{TARGET_OMP_TARGET_DECL}
+@end deftypefn
+
 @deftypefn {Target Hook} tree TARGET_BUILTIN_CHKP_FUNCTION (unsigned @var{fcode})
 This hook allows target to redefine built-in functions used by
 Pointer Bounds Checker for code instrumentation.  Hook should return
