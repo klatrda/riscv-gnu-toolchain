@@ -3627,32 +3627,6 @@
  (set_attr "mode" "SI,SI")]
 )
 
-(define_insn "vec_permv2hi_low"
-  [(set (match_operand:V2HI 0 "register_operand"                  "=r,r")
-        (unspec:V2HI [(match_operand:V2HI 1 "register_operand"    "r,r")
-                      (match_operand:V2HI 2 "permute_sel_operand" "r,i")
-                     ] UNSPEC_VEC_PERM4)
-   )
-  ]
-  "((Pulp_Cpu==PULP_V2) && !(TARGET_MASK_NOVECT||TARGET_MASK_NOSHUFFLEPACK))"
-  "pv.pack.l.h \t%0,%2,%1 \t# Pack2 low"
-[(set_attr "type" "move,move")
- (set_attr "mode" "SI,SI")]
-)
-
-(define_insn "vec_permv2hi_high"
-  [(set (match_operand:V2HI 0 "register_operand"                  "=r,r")
-        (unspec:V2HI [(match_operand:V2HI 1 "register_operand"    "r,r")
-                      (match_operand:V2HI 2 "permute_sel_operand" "r,i")
-                     ] UNSPEC_VEC_PERM5)
-   )
-  ]
-  "((Pulp_Cpu==PULP_V2) && !(TARGET_MASK_NOVECT||TARGET_MASK_NOSHUFFLEPACK))"
-  "pv.pack.h.h \t%0,%2,%1 \t# Pack2 high"
-[(set_attr "type" "move,move")
- (set_attr "mode" "SI,SI")]
-)
-
 
 (define_expand "vec_permv2hi"
   [(match_operand:V2HI 0 "register_operand"    "")
