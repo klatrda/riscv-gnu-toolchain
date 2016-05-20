@@ -159,7 +159,9 @@ enum riscv_address_type {
   ADDRESS_REG_POST_INC,
   ADDRESS_REG_POST_DEC,
   ADDRESS_REG_POST_MODIFY,
-  ADDRESS_REG_REG
+  ADDRESS_REG_REG,
+  ADDRESS_TINY_SYMBOL,
+  ADDRESS_REG_TINY_SYMBOL
 };
 
 enum riscv_code_model riscv_cmodel = TARGET_DEFAULT_CMODEL;
@@ -579,6 +581,7 @@ riscv_classify_symbol (const_rtx x)
 
   if (GET_CODE (x) == LABEL_REF)
     {
+      if (riscv_is_tiny_symbol_p((rtx) x)) return SYMBOL_TINY_ABSOLUTE;
       if (LABEL_REF_NONLOCAL_P (x))
 	return SYMBOL_GOT_DISP;
       return SYMBOL_ABSOLUTE;
@@ -589,7 +592,7 @@ riscv_classify_symbol (const_rtx x)
   if (flag_pic && !riscv_symbol_binds_local_p (x))
     return SYMBOL_GOT_DISP;
 
-  return SYMBOL_ABSOLUTE;
+  if (riscv_is_tiny_symbol_p((rtx) x)) return SYMBOL_TINY_ABSOLUTE; else return SYMBOL_ABSOLUTE;
 }
 
 /* Classify the base of symbolic expression X, given that X appears in
@@ -637,6 +640,9 @@ riscv_symbolic_constant_p (rtx x, enum riscv_symbol_type *symbol_type)
     case SYMBOL_TLS_LE:
       return (int32_t) INTVAL (offset) == INTVAL (offset);
 
+    case SYMBOL_TINY_ABSOLUTE:
+	return true;
+
     default:
       return false;
     }
@@ -650,6 +656,7 @@ static int riscv_symbol_insns (enum riscv_symbol_type type)
   switch (type)
   {
     case SYMBOL_TLS: return 0; /* Depends on the TLS model. */
+    case SYMBOL_TINY_ABSOLUTE: return 1; /* the reference itself */
     case SYMBOL_ABSOLUTE: return 2; /* LUI + the reference itself */
     case SYMBOL_TLS_LE: return 3; /* LUI + ADD TP + the reference itself */
     case SYMBOL_GOT_DISP: return 3; /* AUIPC + LD GOT + the reference itself */
@@ -741,8 +748,10 @@ static bool
 riscv_valid_offset_p (rtx x, enum machine_mode mode)
 {
   /* Check that X is a signed 12-bit number.  */
-  if (!const_arith_operand (x, Pmode))
+  if (!const_arith_operand (x, Pmode)) {
+    if (riscv_is_tiny_symbol_p(x)) return true;
     return false;
+  }
 
   /* We may need to split multiword moves, so make sure that every word
      is accessible.  */
@@ -807,8 +816,13 @@ riscv_classify_address (struct riscv_address_info *info, rtx x,
       		info->type = ADDRESS_REG_REG;
          	return (riscv_valid_base_register_p (info->reg, mode, strict_p)
          	        && riscv_valid_base_register_p (info->offset, mode, strict_p));
-      } else return (riscv_valid_base_register_p (info->reg, mode, strict_p)
-	             && riscv_valid_offset_p (info->offset, mode));
+      } else {
+		if ((GET_CODE(info->offset) == SYMBOL_REF || GET_CODE(info->offset) == LABEL_REF) &&
+		    riscv_is_tiny_symbol_p(info->offset)) info->type = ADDRESS_REG_TINY_SYMBOL;
+
+		return (riscv_valid_base_register_p (info->reg, mode, strict_p)
+	                && riscv_valid_offset_p (info->offset, mode));
+      }
 
     case LO_SUM:
       info->type = ADDRESS_LO_SUM;
@@ -864,6 +878,22 @@ riscv_classify_address (struct riscv_address_info *info, rtx x,
          	       && riscv_valid_base_register_p (info->offset, mode, strict_p));
          }
       }
+
+    case LABEL_REF:
+    case SYMBOL_REF:
+        if (riscv_is_tiny_symbol_p(x)) {
+                info->type = ADDRESS_TINY_SYMBOL;
+                return true;
+        }
+        return false;
+   case CONST:
+        if (GET_CODE (XEXP (x, 0)) == PLUS && GET_CODE (XEXP (XEXP (x, 0), 0)) == SYMBOL_REF && CONST_INT_P (XEXP (XEXP (x, 0), 1)) &&
+            riscv_is_tiny_symbol_p(XEXP (XEXP (x, 0), 0))) {
+                info->type = ADDRESS_TINY_SYMBOL;
+                return true;
+        }
+        return false;
+
 
     default:
       return false;
@@ -1164,6 +1194,9 @@ riscv_split_symbol (rtx temp, rtx addr, enum machine_mode mode, rtx *low_out)
     {
       switch (symbol_type)
 	{
+	case SYMBOL_TINY_ABSOLUTE:
+      	  *low_out = gen_rtx_LO_SUM (Pmode, const0_rtx, addr);
+	  break;
 	case SYMBOL_ABSOLUTE:
 	  high = gen_rtx_HIGH (Pmode, copy_rtx (addr));
       	  high = riscv_force_temporary (temp, high);
@@ -1883,17 +1916,25 @@ printf("----------------------------\n");
   	struct riscv_address_info addr;
         int Prefix=0;
 
+	riscv_classify_address (&addr, XEXP (src, 0), word_mode, true);
   	if ((Pulp_Cpu>=PULP_V0) && !TARGET_MASK_NOINDREGREG) {
-		riscv_classify_address (&addr, XEXP (src, 0), word_mode, true);
     		if (addr.type == ADDRESS_REG_REG) Prefix = 1;
         }
-	switch (GET_MODE_SIZE (mode))
-	  {
-	  case 1: return Prefix?"p.lbu\t%0,%1":"lbu\t%0,%1";
-	  case 2: return Prefix?"p.lhu\t%0,%1":"lhu\t%0,%1";
-	  case 4: return Prefix?"p.lw\t%0,%1":"lw\t%0,%1";
-	  case 8: return "ld\t%0,%1";
-	  }
+	if (addr.type == ADDRESS_TINY_SYMBOL /* || addr.type == ADDRESS_REG_TINY_SYMBOL */ ) {
+		switch (GET_MODE_SIZE (mode)) {
+	  		case 1: return Prefix?"p.lbu\t%0,%%tiny(%1)(x0)":"lbu\t%0,%%tiny(%1)(x0)";
+	  		case 2: return Prefix?"p.lhu\t%0,%%tiny(%1)(x0)":"lhu\t%0,%%tiny(%1)(x0)";
+	  		case 4: return Prefix?"p.lw\t%0,%%tiny(%1)(x0)":"lw\t%0,%%tiny(%1)(x0)";
+	  		case 8: return "ld\t%0,%1";
+	  	}
+	} else {
+		switch (GET_MODE_SIZE (mode)) {
+	  		case 1: return Prefix?"p.lbu\t%0,%1":"lbu\t%0,%1";
+	  		case 2: return Prefix?"p.lhu\t%0,%1":"lhu\t%0,%1";
+	  		case 4: return Prefix?"p.lw\t%0,%1":"lw\t%0,%1";
+	  		case 8: return "ld\t%0,%1";
+	  	}
+	}
        }
 
       if (src_code == CONST_INT) return "li\t%0,%1";
@@ -1914,6 +1955,7 @@ printf("----------------------------\n");
 	  {
 	  case SYMBOL_GOT_DISP: return "la\t%0,%1";
 	  case SYMBOL_ABSOLUTE: return "lla\t%0,%1";
+	  case SYMBOL_TINY_ABSOLUTE: return "addi\t%0,x0,%1";
 	  default: gcc_unreachable();
 	  }
     }
@@ -1940,17 +1982,25 @@ printf("----------------------------\n");
   	struct riscv_address_info addr;
         int Prefix=0;
 
+	riscv_classify_address (&addr, XEXP (dest, 0), word_mode, true);
   	if ((Pulp_Cpu>=PULP_V0) && !TARGET_MASK_NOINDREGREG) {
-		riscv_classify_address (&addr, XEXP (dest, 0), word_mode, true);
     		if (addr.type == ADDRESS_REG_REG) Prefix = 1;
         }
-	switch (GET_MODE_SIZE (mode))
-	  {
-	  case 1: return Prefix?"p.sb\t%z1,%0":"sb\t%z1,%0";
-	  case 2: return Prefix?"p.sh\t%z1,%0":"sh\t%z1,%0";
-	  case 4: return Prefix?"p.sw\t%z1,%0":"sw\t%z1,%0";
-	  case 8: return "sd\t%z1,%0";
-	  }
+	if (addr.type == ADDRESS_TINY_SYMBOL /* || addr.type == ADDRESS_REG_TINY_SYMBOL */) {
+		switch (GET_MODE_SIZE (mode)) {
+	  		case 1: return Prefix?"p.sb\t%z1,%%tiny(%0)(x0)":"sb\t%z1,%%tiny(%0)(x0)";
+	  		case 2: return Prefix?"p.sh\t%z1,%%tiny(%0)(x0)":"sh\t%z1,%%tiny(%0)(x0)";
+	  		case 4: return Prefix?"p.sw\t%z1,%%tiny(%0)(x0)":"sw\t%z1,%%tiny(%0)(x0)";
+	  		case 8: return "sd\t%z1,%0";
+	  	}
+	} else {
+		switch (GET_MODE_SIZE (mode)) {
+	  		case 1: return Prefix?"p.sb\t%z1,%0":"sb\t%z1,%0";
+	  		case 2: return Prefix?"p.sh\t%z1,%0":"sh\t%z1,%0";
+	  		case 4: return Prefix?"p.sw\t%z1,%0":"sw\t%z1,%0";
+	  		case 8: return "sd\t%z1,%0";
+	  	}
+	}
       }
     }
   if (src_code == REG && FP_REG_P (REGNO (src)))
@@ -3284,6 +3334,8 @@ static const struct attribute_spec riscv_attribute_table[] =
 {
   /* { name, min_len, max_len, decl_req, type_req, fn_type_req, handler } */
   { "interrupt",      0, 0, false, true,  true,  NULL, true  },
+  { "tiny",           0, 0, true,  false, false, NULL, true  },
+  { NULL,             0, 0, false, false, false, NULL, false }
 };
 
 #undef TARGET_ATTRIBUTE_TABLE
@@ -3308,6 +3360,21 @@ riscv_init_relocs (void)
       riscv_hi_relocs[SYMBOL_TLS_LE] = "%tprel_hi(";
       riscv_lo_relocs[SYMBOL_TLS_LE] = "%tprel_lo(";
     }
+}
+
+bool
+riscv_is_tiny_symbol_p (rtx addr)
+{
+  tree decl;
+  tree attrs;
+
+  if (GET_CODE(addr) != SYMBOL_REF) return false;
+  decl = SYMBOL_REF_DECL(addr);
+  if (decl) {
+     attrs = DECL_ATTRIBUTES (decl);
+     if ((attrs && lookup_attribute ("tiny", attrs))) return true;
+  }
+  return false;
 }
 
 /* Print symbolic operand OP, which is part of a HIGH or LO_SUM
@@ -3472,6 +3539,12 @@ riscv_print_operand_address (FILE *file, rtx x)
   if (riscv_classify_address (&addr, x, word_mode, true))
     switch (addr.type)
       {
+      case ADDRESS_REG_TINY_SYMBOL:
+	fprintf (file, "%%tiny(");
+	riscv_print_operand (file, addr.offset, 0);
+	fprintf (file, ")");
+	fprintf (file, "(%s)", reg_names[REGNO (addr.reg)]);
+	return;
       case ADDRESS_REG_REG:
       case ADDRESS_REG:
 	riscv_print_operand (file, addr.offset, 0);
@@ -3491,6 +3564,10 @@ riscv_print_operand_address (FILE *file, rtx x)
       case ADDRESS_SYMBOLIC:
 	output_addr_const (file, riscv_strip_unspec_address (x));
 	return;
+
+      case ADDRESS_TINY_SYMBOL:
+        output_addr_const (file, riscv_strip_unspec_address (x));
+        return;
 
       case ADDRESS_REG_POST_INC:
 	// riscv_print_operand (file, addr.offset, 0);
@@ -3531,6 +3608,13 @@ riscv_in_small_data_p (const_tree x)
     }
 
   return riscv_size_ok_for_small_data_p (int_size_in_bytes (TREE_TYPE (x)));
+}
+
+static bool
+riscv_use_anchors_for_symbol_p (const_rtx symbol)
+{
+      if (riscv_is_tiny_symbol_p((rtx) symbol)) return false;
+      return default_use_anchors_for_symbol_p (symbol);
 }
 
 /* Return a section for X, handling small data. */
@@ -4580,7 +4664,7 @@ static int CheckBuiltin(int Code, int Narg, ...)
 
 {
 	int i;
-	rtx Op[6];
+	rtx Op[6] = {NULL, NULL, NULL, NULL, NULL, NULL};
 	const char *Diag=NULL;
 	va_list ap;
 
@@ -4678,6 +4762,7 @@ static int CheckBuiltin(int Code, int Narg, ...)
 				int Offset = INTVAL (Op[2]);
 				if (Size > 0 && Offset >=0 && ((Size+Offset)<=32)) return 1;
 			}
+			Diag = "__builtin_pulp_bextract(X, Size, Offste) Expects Size and Offset immediate constants, Size>0, Offset>=0, (Size+Offset)<=32";
 			break;
 		/* Op0 const > 0, Op1 const >= 0, (Op0+Op1)<32 */
 		/* Op0 -> Target
@@ -4704,6 +4789,35 @@ static int CheckBuiltin(int Code, int Narg, ...)
 			if (Op[1] && (GET_CODE(Op[1]) == CONST_INT)) return 1;
 			Diag = "__builtin_event_unit_read(base, offset), offset expected to be immediate value";
 			break;
+		case CODE_FOR_read_spr:
+			if (Op[0] && (GET_CODE(Op[0]) == CONST_INT)) {
+				unsigned int Reg = UINTVAL(Op[0]);
+				if (Reg <= 4091) return 1;
+			}
+			Diag = "__builtin_pulp_spr_read(Spr) expects Spr to be immediate and in [0..4091]";
+			break;
+		case CODE_FOR_write_spr:
+			if (Op[0] && (GET_CODE(Op[0]) == CONST_INT)) {
+				unsigned int Reg = UINTVAL(Op[0]);
+				if (Reg <= 4091) return 1;
+			}
+			Diag = "__builtin_pulp_spr_write(Spr, Value) expects Spr to be immediate and in [0..4091]";
+			break;
+		case CODE_FOR_spr_bit_set:
+			if (Op[0] && (GET_CODE(Op[0]) == CONST_INT)) {
+				unsigned int Reg = UINTVAL(Op[0]);
+				if (Reg <= 4091) return 1;
+			}
+			Diag = "__builtin_pulp_spr_bit_set(Spr, Value) expects Spr to be immediate and in [0..4091]";
+			break;
+		case CODE_FOR_spr_bit_clr:
+			if (Op[0] && (GET_CODE(Op[0]) == CONST_INT)) {
+				unsigned int Reg = UINTVAL(Op[0]);
+				if (Reg <= 4091) return 1;
+			}
+			Diag = "__builtin_pulp_spr_bit_clr(Spr, Value) expects Spr to be immediate and in [0..4091]";
+			break;
+
 		/* Internal error no handler for this builtin code */
 		default:
 			gcc_unreachable ();
@@ -4910,6 +5024,12 @@ static const struct riscv_builtin_description riscv_builtins[] = {
 
   DIRECT_BUILTIN1(load_evt_unit,       	event_unit_read, RISCV_INT_FTYPE_POINTER_INT,         		pulp_v2, CheckBuiltin),
   DIRECT_BUILTIN1(OffsetedRead,		OffsetedRead,	RISCV_INT_FTYPE_POINTER_INT,			pulp_v2, NULL),
+
+  DIRECT_BUILTIN1(read_spr,		spr_read,	RISCV_INT_FTYPE_INT,				pulp_v2, CheckBuiltin),
+
+  DIRECT_NO_TARGET_BUILTIN1(write_spr,	spr_write,	RISCV_VOID_FTYPE_INT_INT, 			pulp_v2, CheckBuiltin),
+  DIRECT_NO_TARGET_BUILTIN1(spr_bit_set,spr_bit_set,	RISCV_VOID_FTYPE_INT_INT, 			pulp_v2, CheckBuiltin),
+  DIRECT_NO_TARGET_BUILTIN1(spr_bit_clr,spr_bit_clr,	RISCV_VOID_FTYPE_INT_INT, 			pulp_v2, CheckBuiltin),
 
   DIRECT_NO_TARGET_BUILTIN1(pulp_omp_barrier, 		pulp_GOMP_barrier,		RISCV_VOID_FTYPE_VOID,	pulp_v2, NULL),
   DIRECT_NO_TARGET_BUILTIN1(pulp_omp_critical_start, 	pulp_GOMP_critical_start,	RISCV_VOID_FTYPE_VOID,	pulp_v2, NULL),
@@ -6374,6 +6494,9 @@ riscv_reorg (void)
 
 #undef TARGET_IN_SMALL_DATA_P
 #define TARGET_IN_SMALL_DATA_P riscv_in_small_data_p
+
+#undef TARGET_USE_ANCHORS_FOR_SYMBOL_P
+#define TARGET_USE_ANCHORS_FOR_SYMBOL_P riscv_use_anchors_for_symbol_p
 
 #undef TARGET_ASM_SELECT_RTX_SECTION
 #define TARGET_ASM_SELECT_RTX_SECTION  riscv_elf_select_rtx_section

@@ -66,6 +66,11 @@
   UNSPEC_OMP_PULP_BARRIER
   UNSPEC_OMP_PULP_CRITICAL_START
   UNSPEC_OMP_PULP_CRITICAL_END
+
+  UNSPEC_SPR_READ
+  UNSPEC_SPR_WRITE
+  UNSPEC_SPR_BIT_SET
+  UNSPEC_SPR_BIT_CLR
 ])
 
 (define_constants
@@ -2775,6 +2780,48 @@
    (set_attr "mode" "SI,SI")]
 )
 
+;; Read/Write special purpose registers
+
+(define_insn "read_spr"
+  [(set (match_operand:SI 0 "register_operand" "=r")
+	(unspec:SI [(match_operand:SI 1 "immediate_operand" "L")] UNSPEC_SPR_READ)
+   )
+  ]
+ "(Pulp_Cpu>=PULP_V2)"
+  "csrrs \t%0,%1,x0\t# SPR read"
+  [(set_attr "type" "load")
+   (set_attr "mode" "SI")]
+)
+
+(define_insn "write_spr"
+  [(unspec_volatile [(match_operand:SI 0 "immediate_operand" "L,L") (match_operand:SI 1 "nonmemory_operand" "r,K")] UNSPEC_SPR_WRITE)
+  ]
+ "(Pulp_Cpu>=PULP_V2)"
+ "@
+  csrrw \tx0,%0,%1\t# SPR write
+  csrrwi \tx0,%0,%1\t# SPR write uimm5"
+)
+
+(define_insn "spr_bit_set"
+  [(unspec_volatile [(match_operand:SI 0 "immediate_operand" "L,L") (match_operand:SI 1 "nonmemory_operand" "r,K")] UNSPEC_SPR_BIT_SET)
+  ]
+ "(Pulp_Cpu>=PULP_V2)"
+  "@
+  csrrs \tx0,%0,%1\t# SPR bit set
+  csrrsi \tx0,%0,%1\t# SPR bit set uimm5"
+)
+ 
+(define_insn "spr_bit_clr"
+  [(unspec_volatile [(match_operand:SI 0 "immediate_operand" "L,L") (match_operand:SI 1 "nonmemory_operand" "r,K")] UNSPEC_SPR_BIT_CLR)
+  ]
+ "(Pulp_Cpu>=PULP_V2)"
+  "@
+  csrrc \tx0,%0,%1\t# SPR bit clr
+  csrrci \tx0,%0,%1\t# SPR bit clr uimm5"
+)
+
+
+
 ;; Open MP support
 (define_insn "pulp_omp_barrier"
   [(unspec_volatile [(const_int 0)] UNSPEC_OMP_PULP_BARRIER)
@@ -2948,13 +2995,13 @@
 })
 
 (define_insn "*mov<mode>_internal"
-  [(set (match_operand:IMOVE32 0 "nonimmediate_operand" "=r,r,r,m,*f,*f,*r,*m")
-	(match_operand:IMOVE32 1 "move_operand" "r,T,m,rJ,*r*J,*m,*f,*f"))]
+  [(set (match_operand:IMOVE32 0 "nonimmediate_operand" "=r,r,r,r,m,U,*f,*f,*r,*m")
+	(match_operand:IMOVE32 1 "move_operand" "r,T,m,U,rJ,rJ,*r*J,*m,*f,*f"))]
   "(register_operand (operands[0], <MODE>mode) || reg_or_0_operand (operands[1], <MODE>mode)) &&
     !riscv_filter_pulp_operand(operands[0], !(Pulp_Cpu>=PULP_V0)) &&
     !riscv_filter_pulp_operand(operands[1], !(Pulp_Cpu>=PULP_V0))"
   { return riscv_output_move (operands[0], operands[1]); }
-  [(set_attr "move_type" "move,const,load,store,mtc,fpload,mfc,fpstore")
+  [(set_attr "move_type" "move,const,load,load,store,store,mtc,fpload,mfc,fpstore")
    (set_attr "mode" "SI")])
 
 

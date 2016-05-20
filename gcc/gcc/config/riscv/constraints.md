@@ -70,6 +70,16 @@
   (and (match_code "const_int")
        (match_test "ival == 0")))
 
+(define_constraint "K"
+ "Uimm5."
+  (and (match_code "const_int")
+       (and (match_test "ival>=0") (match_test "ival<=31"))))
+
+(define_constraint "L"
+ "Uimm5."
+  (and (match_code "const_int")
+       (and (match_test "ival>=0") (match_test "ival<=4095"))))
+
 ;; Floating-point constraints
 
 (define_constraint "G"
@@ -99,6 +109,11 @@
    A constant @code{move_operand}."
   (and (match_operand 0 "move_operand")
        (match_test "CONSTANT_P (op)")))
+
+(define_memory_constraint "U"
+  "A valid tiny memory operand"
+  (and (match_code "mem")
+       (match_test "tiny_memory_operand (op, VOIDmode)")))
 
 (define_memory_constraint "W"
   "@internal

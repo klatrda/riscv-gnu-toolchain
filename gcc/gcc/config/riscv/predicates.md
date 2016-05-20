@@ -249,3 +249,45 @@
 
 (define_predicate "fp_unorder_operator"
   (match_code "ordered,unordered"))
+
+(define_predicate "tiny_memory_operand"
+  (match_code "mem")
+{
+        rtx addr;
+
+        /* Eliminate non-memory operations.  */
+        if (GET_CODE (op) != MEM) return 0;
+
+        if (mode == VOIDmode) mode = GET_MODE (op);
+        if (GET_MODE_SIZE (mode)  > UNITS_PER_WORD) return 0;
+
+        addr = XEXP(op, 0);
+        switch (GET_CODE(addr)) {
+                case SYMBOL_REF:
+                        return (riscv_is_tiny_symbol_p(addr));
+                case CONST:
+                        return (GET_CODE (XEXP (addr, 0)) == PLUS && GET_CODE (XEXP (XEXP (addr, 0), 0)) == SYMBOL_REF &&
+                                CONST_INT_P (XEXP (XEXP (addr, 0), 1)) && riscv_is_tiny_symbol_p(XEXP (XEXP (addr, 0), 0)));
+                case PLUS:
+                        return (GET_CODE (XEXP (addr, 0)) == REG && GET_CODE (XEXP (addr, 1)) == SYMBOL_REF &&
+                                riscv_is_tiny_symbol_p(XEXP (addr, 1)));
+                default: return 0;
+        }
+}
+)
+
+(define_predicate "tiny_ref_operand"
+  (match_code "symbol_ref")
+{
+        return (riscv_is_tiny_symbol_p(op));
+}
+)
+
+(define_predicate "tiny_ref_operand_expr"
+  (match_code "const")
+{
+        return (GET_CODE (XEXP (op, 0)) == PLUS && GET_CODE (XEXP (XEXP (op, 0), 0)) == SYMBOL_REF &&
+                                CONST_INT_P (XEXP (XEXP (op, 0), 1)) && riscv_is_tiny_symbol_p(XEXP (XEXP (op, 0), 0)));
+}
+)
+

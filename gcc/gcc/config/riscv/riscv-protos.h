@@ -26,6 +26,7 @@ along with GCC; see the file COPYING3.  If not see
 
 enum riscv_symbol_type {
   SYMBOL_ABSOLUTE,
+  SYMBOL_TINY_ABSOLUTE,
   SYMBOL_GOT_DISP,
   SYMBOL_TLS,
   SYMBOL_TLS_LE,
@@ -121,5 +122,8 @@ extern unsigned int current_section_flags (void);
 extern void riscv_expand_vector_init (rtx, rtx);
 
 extern bool riscv_filter_pulp_operand(rtx, bool);
+
+extern bool riscv_is_tiny_symbol_p (rtx addr);
+
 
 #endif /* ! GCC_RISCV_PROTOS_H */

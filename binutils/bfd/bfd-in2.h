@@ -5575,6 +5575,8 @@ value in a word.  The relocation is relative offset from  */
   BFD_RELOC_RISCV_GPREL_S,
   BFD_RELOC_RISCV_REL12,
   BFD_RELOC_RISCV_RELU5,
+  BFD_RELOC_RISCV_12_I,
+  BFD_RELOC_RISCV_12_S,
 
 
 /* This is used to tell the dynamic linker to copy the value out of

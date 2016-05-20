@@ -1489,6 +1489,15 @@ perform_relocation (const reloc_howto_type *howto,
       value = ENCODE_UTYPE_IMM (RISCV_CONST_HIGH_PART (value));
       break;
 
+    case R_RISCV_12_I:
+      if (!VALID_ITYPE_IMM (value)) return bfd_reloc_overflow;
+      value = ENCODE_ITYPE_IMM (value);
+      break;
+    case R_RISCV_12_S:
+      if (!VALID_STYPE_IMM (value)) return bfd_reloc_overflow;
+      value = ENCODE_STYPE_IMM (value);
+      break;
+
     case R_RISCV_REL12:
       value = ENCODE_ITYPE_IMM (value>>howto->rightshift);
       break;
@@ -1825,6 +1834,9 @@ riscv_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 	case R_RISCV_LO12_S:
         case R_RISCV_RELU5:
         case R_RISCV_REL12:
+
+        case R_RISCV_12_I:
+        case R_RISCV_12_S:
 	  /* These require no special handling beyond perform_relocation.  */
 	  break;
 

@@ -1085,6 +1085,7 @@ static const struct percent_op_match percent_op_itype[] =
   {"%lo", BFD_RELOC_RISCV_LO12_I},
   {"%tprel_lo", BFD_RELOC_RISCV_TPREL_LO12_I},
   {"%pcrel_lo", BFD_RELOC_RISCV_PCREL_LO12_I},
+  {"%tiny", BFD_RELOC_RISCV_12_I},
   {0, 0}
 };
 
@@ -1093,6 +1094,7 @@ static const struct percent_op_match percent_op_stype[] =
   {"%lo", BFD_RELOC_RISCV_LO12_S},
   {"%tprel_lo", BFD_RELOC_RISCV_TPREL_LO12_S},
   {"%pcrel_lo", BFD_RELOC_RISCV_PCREL_LO12_S},
+  {"%tiny", BFD_RELOC_RISCV_12_S},
   {0, 0}
 };
 
@@ -1793,7 +1795,9 @@ alu_op:
 		      || (*args == '0' && imm_expr->X_add_number != 0)
 		      || imm_expr->X_add_number >= (signed)RISCV_IMM_REACH/2
 		      || imm_expr->X_add_number < -(signed)RISCV_IMM_REACH/2)
-		    break;
+
+			if (!(imm_expr->X_op != O_constant && (p == percent_op_itype || p == percent_op_stype))) 
+		    		break;
 		}
 
 	      s = expr_end;
@@ -2159,6 +2163,10 @@ md_apply_fix (fixS *fixP, valueT *valP, segT seg ATTRIBUTE_UNUSED)
     case BFD_RELOC_RISCV_CALL:
     case BFD_RELOC_RISCV_CALL_PLT:
     case BFD_RELOC_RISCV_ALIGN:
+      break;
+
+    case BFD_RELOC_RISCV_12_I:
+    case BFD_RELOC_RISCV_12_S:
       break;
 
     default:
