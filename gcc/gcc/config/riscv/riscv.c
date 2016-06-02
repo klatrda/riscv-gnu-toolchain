@@ -375,7 +375,8 @@ const enum reg_class riscv_regno_to_class[FIRST_PSEUDO_REGISTER] = {
   FP_REGS,	FP_REGS,	FP_REGS,	FP_REGS,
   FP_REGS,	FP_REGS,	FP_REGS,	FP_REGS,
   FRAME_REGS,	FRAME_REGS,	LC_REGS,	LC_REGS,
-  LE_REGS,	LE_REGS,	LS_REGS,	LS_REGS
+  LE_REGS,	LE_REGS,	LS_REGS,	LS_REGS,
+  VIT_REGS
 };
 
 /* Costs to use when optimizing for size.  */
@@ -1939,7 +1940,7 @@ printf("----------------------------\n");
 
       if (src_code == CONST_INT) return "li\t%0,%1";
       else if (src_code == CONST_VECTOR) {
-		if (riscv_replicated_const_vector(src, -32, 31)) {
+		if (((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOVECT) && riscv_replicated_const_vector(src, -32, 31)) {
 			if (GET_MODE(src)==V4QImode) return "pv.add.sci.b\t%0,x0,%W1";
 			else return "pv.add.sci.h\t%0,x0,%w1";
 		} else {
@@ -3470,6 +3471,8 @@ riscv_print_operand (FILE *file, rtx op, int letter)
          enum machine_mode inner_mode = GET_MODE_INNER (GET_MODE(op));
          HOST_WIDE_INT mask = GET_MODE_MASK (inner_mode);
          HOST_WIDE_INT val = INTVAL (CONST_VECTOR_ELT (op, 0)) & mask;
+         if (val_signbit_known_set_p(inner_mode, val)) // ????
+                 val |= ~GET_MODE_MASK (inner_mode);
          fprintf (file, "%d", (int) val);
       }
       break;
