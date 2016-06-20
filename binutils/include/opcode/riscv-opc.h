@@ -1055,7 +1055,9 @@
 
 /* Pulpv2. Vectorial branch all */
 #define MATCH_BEQM1 0x2063
+#define MATCH_BNEM1 0x3063
 #define MASK_BEQM1  0x707f
+#define MASK_BNEM1  0x707f
 
 #endif
 #ifdef DECLARE_INSN

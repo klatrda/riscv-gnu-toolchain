@@ -66,6 +66,7 @@
   UNSPEC_OMP_PULP_BARRIER
   UNSPEC_OMP_PULP_CRITICAL_START
   UNSPEC_OMP_PULP_CRITICAL_END
+  UNSPEC_WRITESI
 
   UNSPEC_SPR_READ
   UNSPEC_SPR_WRITE
@@ -309,7 +310,7 @@
 (define_mode_iterator SHORT [QI HI])
 
 ;; Likewise the 64-bit truncate-and-shift patterns.
-(define_mode_iterator SUBDISF [QI HI SI SF V2HI V4QI])
+(define_mode_iterator SUBDISF [QI HI SI (SF "!TARGET_HARD_FLOAT") V2HI V4QI])
 (define_mode_iterator SUBDI [QI HI SI])
 (define_mode_iterator HISI [HI SI])
 (define_mode_iterator ANYI [QI HI SI (DI "TARGET_64BIT")])
@@ -2823,29 +2824,79 @@
 
 
 ;; Open MP support
-(define_insn "pulp_omp_barrier"
-  [(unspec_volatile [(const_int 0)] UNSPEC_OMP_PULP_BARRIER)
-   (clobber (match_scratch:SI 0 "=&r"))
-  ]
+
+(define_expand "pulp_omp_barrier"
+  [(unspec_volatile [(const_int 0)] UNSPEC_OMP_PULP_BARRIER)]
   "(Pulp_Cpu>=PULP_V2)"
-  "* return riscv_explicit_load_store(operands[0], NULL, 0x2017216, 1);"
+{
+	rtx Reg1 = gen_reg_rtx (SImode);
+	rtx Reg2 = gen_reg_rtx (SImode);
+	emit_insn(gen_movsi(Reg1, gen_rtx_CONST_INT(SImode, 0x00204000)));
+	emit_insn(gen_load_evt_unit(Reg2, Reg1, gen_rtx_CONST_INT(SImode, 0x21c)));
+	DONE;
+}
 )
 
-(define_insn "pulp_omp_critical_start"
-  [(unspec_volatile [(const_int 0)] UNSPEC_OMP_PULP_CRITICAL_START)
-   (clobber (match_scratch:SI 0 "=&r"))
-  ]
+
+;;(define_insn "pulp_omp_barrier"
+;;  [(unspec_volatile [(const_int 0)] UNSPEC_OMP_PULP_BARRIER)
+;;   (clobber (match_scratch:SI 0 "=&r"))
+;;  ]
+;;  "(Pulp_Cpu>=PULP_V2)"
+;;  "* return riscv_explicit_load_store(operands[0], NULL, 0x2017216, 1);"
+;;)
+
+(define_expand "pulp_omp_critical_start"
+  [(unspec_volatile [(const_int 0)] UNSPEC_OMP_PULP_CRITICAL_START)]
   "(Pulp_Cpu>=PULP_V2)"
-  "* return riscv_explicit_load_store(operands[0], gen_rtx_REG(SImode, 0), 0x2016448, 1);"
+{
+	rtx Reg1 = gen_reg_rtx (SImode);
+	rtx Reg2 = gen_reg_rtx (SImode);
+	emit_insn(gen_movsi(Reg1, gen_rtx_CONST_INT(SImode, 0x00204000)));
+	emit_insn(gen_load_evt_unit(Reg2, Reg1, gen_rtx_CONST_INT(SImode, 0xc0)));
+	DONE;
+}
 )
 
-(define_insn "pulp_omp_critical_end"
-  [(unspec_volatile [(const_int 0)] UNSPEC_OMP_PULP_CRITICAL_END)
-   (clobber (match_scratch:SI 0 "=&r"))
-  ]
-  "(Pulp_Cpu>=PULP_V2)"
-  "* return riscv_explicit_load_store(operands[0], gen_rtx_REG(SImode, 0), 0x2016448, 0);"
+;; (define_insn "pulp_omp_critical_start"
+;;   [(unspec_volatile [(const_int 0)] UNSPEC_OMP_PULP_CRITICAL_START)
+;;    (clobber (match_scratch:SI 0 "=&r"))
+;;   ]
+;;   "(Pulp_Cpu>=PULP_V2)"
+;;   "* return riscv_explicit_load_store(operands[0], gen_rtx_REG(SImode, 0), 0x2016448, 1);"
+;; )
+
+(define_insn "writesi"
+  [(unspec_volatile [(match_operand:SI 0 "register_operand" "r,r")
+		     (match_operand:SI 1 "register_operand" "r,r")
+		     (match_operand:SI 2 "nonmemory_operand" "r,i")] UNSPEC_WRITESI)]
+ "(Pulp_Cpu>=PULP_V2)"
+  "@
+   p.sw \t%0,%2(%1)
+   p.sw \t%0,%2(%1)"
+  [(set_attr "type" "store,store")
+   (set_attr "mode" "SI,SI")]
 )
+
+(define_expand "pulp_omp_critical_end"
+  [(unspec_volatile [(const_int 0)] UNSPEC_OMP_PULP_CRITICAL_END)]
+  "(Pulp_Cpu>=PULP_V2)"
+{
+	rtx Reg1 = gen_reg_rtx (SImode);
+	rtx Reg2 = gen_reg_rtx (SImode);
+	emit_insn(gen_movsi(Reg1, gen_rtx_CONST_INT(SImode, 0x00204000)));
+	emit_insn(gen_writesi(Reg2, Reg1, gen_rtx_CONST_INT(SImode, 0xc0)));
+	DONE;
+}
+)
+
+;;(define_insn "pulp_omp_critical_end"
+;;  [(unspec_volatile [(const_int 0)] UNSPEC_OMP_PULP_CRITICAL_END)
+;;   (clobber (match_scratch:SI 0 "=&r"))
+;;  ]
+;;  "(Pulp_Cpu>=PULP_V2)"
+;;  "* return riscv_explicit_load_store(operands[0], gen_rtx_REG(SImode, 0), 0x2016448, 0);"
+;;)
 
 (define_insn "OffsetedRead"
   [(set (match_operand:SI 0 "register_operand" "=r")

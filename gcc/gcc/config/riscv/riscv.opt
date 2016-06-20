@@ -24,9 +24,20 @@
 HeaderInclude
 config/riscv/riscv-opts.h
 
-mcpu=
-Target RejectNegative Joined Var(Pulp_Cpu) Enum(Pulp_Processor_Type) Init(PULP_NONE)
--mcpu=CPU       Compile code for Pulp variant CPU
+Enum
+Name(Pulp_Chip_Type) Type(enum Pulp_Chip_Type)
+
+EnumValue
+Enum(Pulp_Chip_Type) String(honey) Value(PULP_CHIP_HONEY)
+
+EnumValue
+Enum(Pulp_Chip_Type) String(pulpino) Value(PULP_CHIP_PULPINO)
+
+
+mchip=
+Target RejectNegative Joined Var(Pulp_Chip) Enum(Pulp_Chip_Type) Init(PULP_CHIP_NONE)
+-mchip=CHIP	Compile code for pulp chip CHIP
+
 
 Enum
 Name(Pulp_Processor_Type) Type(enum Pulp_Processor_Type)
@@ -43,6 +54,30 @@ Enum(Pulp_Processor_Type) String(pulpv2) Value(PULP_V2)
 
 EnumValue
 Enum(Pulp_Processor_Type) String(pulpv3) Value(PULP_V3)
+
+mcpu=
+Target RejectNegative Joined Var(Pulp_Cpu) Enum(Pulp_Processor_Type) Init(PULP_NONE)
+-mcpu=CPU       Compile code for Pulp variant CPU, default is none.
+
+mPE=
+Target RejectNegative Joined UInteger Var(Pulp_PE) Init(0)
+-mPE=N		Set PE cluster PE count to N.
+
+mFC=
+Target RejectNegative Joined UInteger Var(Pulp_FC) Init(0)
+-mFC=		0: without FC, 1: with FC.
+
+mL2=
+Target RejectNegative Joined UInteger Var(Pulp_L2_Size) Init(0)
+-mL2=SIZE	Set L2 size to SIZE, Init to 0.
+
+mL1Cl=
+Target RejectNegative Joined UInteger Var(Pulp_L1_Cluster_Size) Init(0)
+-mL1Cl=SIZE	Set Cluster L1 size to SIZE, Init to 0.
+
+mL1Fc=
+Target RejectNegative Joined UInteger Var(Pulp_L1_FC_Size) Init(0)
+-mL1c=SIZE	Set Fabric Controller L1 size to SIZE, Init to 0.
 
 m32
 Target RejectNegative Mask(32BIT)

@@ -1229,6 +1229,7 @@ const struct riscv_opcode riscv_builtin_opcodes[] =
 {"pv.cmpleu.sci.b",	"Xpulpv2", "d,s,bu",	MATCH_V_OP_CMPLEU|MATCH_V_OP_B_VI,	MASK_V_OP1,	match_opcode,	WR_xd|RD_xs1},
 
 {"pv.ball",       	"Xpulpv2",  "s,p",  	MATCH_BEQM1, 			MASK_BEQM1|MASK_RS2, 	match_opcode,   RD_xs1 },
+{"pv.bnall",       	"Xpulpv2",  "s,p",  	MATCH_BNEM1, 			MASK_BNEM1|MASK_RS2, 	match_opcode,   RD_xs1 },
 
 /* Load from event unit */
 
@@ -1631,6 +1632,7 @@ const struct riscv_opcode riscv_builtin_opcodes[] =
 {"pv.cmpleu.sci.b",	"Xpulpv3", "d,s,bu",	MATCH_V_OP_CMPLEU|MATCH_V_OP_B_VI,	MASK_V_OP1,	match_opcode,	WR_xd|RD_xs1},
 
 {"pv.ball",       	"Xpulpv3",  "s,p",  	MATCH_BEQM1, 			MASK_BEQM1|MASK_RS2, 	match_opcode,   RD_xs1 },
+{"pv.bnall",       	"Xpulpv3",  "s,p",  	MATCH_BNEM1, 			MASK_BNEM1|MASK_RS2, 	match_opcode,   RD_xs1 },
 
 /* Load from event unit */
 

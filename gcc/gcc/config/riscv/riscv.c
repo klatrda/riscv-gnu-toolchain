@@ -813,6 +813,7 @@ riscv_classify_address (struct riscv_address_info *info, rtx x,
       info->offset = XEXP (x, 1);
       info->mode = mode;
       if (((Pulp_Cpu>=PULP_V0) && !TARGET_MASK_NOINDREGREG && (GET_MODE_SIZE (mode) <= UNITS_PER_WORD) ) &&
+          !(TARGET_HARD_FLOAT && (mode == SFmode)) &&
           ((GET_CODE(info->offset) == REG) || (GET_CODE(info->offset) == SUBREG))) {
       		info->type = ADDRESS_REG_REG;
          	return (riscv_valid_base_register_p (info->reg, mode, strict_p)
@@ -851,21 +852,21 @@ riscv_classify_address (struct riscv_address_info *info, rtx x,
       info->mode = mode;
       return SMALL_INT (x);
     case POST_INC:
-      if (GET_MODE_SIZE (mode) > UNITS_PER_WORD) return false;
+      if (GET_MODE_SIZE (mode) > UNITS_PER_WORD || (TARGET_HARD_FLOAT && (mode == SFmode))) return false;
       info->type = ADDRESS_REG_POST_INC;
       info->reg = XEXP (x, 0);
       info->offset = XEXP (x, 1);
       info->mode = mode;
       return (riscv_valid_base_register_p (info->reg, mode, strict_p));
     case POST_DEC:
-      if (GET_MODE_SIZE (mode) > UNITS_PER_WORD) return false;
+      if (GET_MODE_SIZE (mode) > UNITS_PER_WORD || (TARGET_HARD_FLOAT && (mode == SFmode))) return false;
       info->type = ADDRESS_REG_POST_DEC;
       info->reg = XEXP (x, 0);
       info->offset = XEXP (x, 1);
       info->mode = mode;
       return (riscv_valid_base_register_p (info->reg, mode, strict_p));
     case POST_MODIFY:
-      if (GET_MODE_SIZE (mode) > UNITS_PER_WORD) return false;
+      if (GET_MODE_SIZE (mode) > UNITS_PER_WORD || (TARGET_HARD_FLOAT && (mode == SFmode))) return false;
       info->type = ADDRESS_REG_POST_MODIFY;
       info->reg = XEXP (x, 0);
       info->mode = mode;
@@ -1875,7 +1876,7 @@ const char * riscv_explicit_load_store(rtx AddrReg, rtx SrcReg, unsigned int Add
 	xoperands[2] = OffsetOp;
 	xoperands[3] = SrcReg;
 	output_asm_insn("lui\t%0,%1", xoperands);
-	if (IsLoad) output_asm_insn("lw\t%0,%2(%0)", xoperands);
+	if (IsLoad) output_asm_insn("p.elw\t%0,%2(%0)", xoperands);
 	else output_asm_insn("sw\t%3,%2(%0)", xoperands);
 
 	return "";
@@ -4947,6 +4948,12 @@ static const struct riscv_builtin_description riscv_builtins[] = {
   DIRECT_BUILTIN1(vashlv2hi3,       	sll2,       	RISCV_V2HI_FTYPE_V2HI_V2HI,      		pulp_v2, NULL),
   DIRECT_BUILTIN1(vashlv4qi3,       	sll4,       	RISCV_V4QI_FTYPE_V4QI_V4QI,      		pulp_v2, NULL),
 
+  DIRECT_BUILTIN1(absv2hi2,       	abs2,       	RISCV_V2HI_FTYPE_V2HI,      			pulp_v2, NULL),
+  DIRECT_BUILTIN1(absv4qi2,       	abs4,       	RISCV_V4QI_FTYPE_V4QI,      			pulp_v2, NULL),
+
+  DIRECT_BUILTIN1(negv2hi2,       	neg2,       	RISCV_V2HI_FTYPE_V2HI,      			pulp_v2, NULL),
+  DIRECT_BUILTIN1(negv4qi2,       	neg4,       	RISCV_V4QI_FTYPE_V4QI,      			pulp_v2, NULL),
+
   DIRECT_BUILTIN1(dotpv2hi,         	dotsp2,     	RISCV_INT_FTYPE_V2HI_V2HI,       		pulp_v2, NULL),
   DIRECT_BUILTIN1(dotspscv2hi_le,   	dotspsc2,   	RISCV_INT_FTYPE_V2HI_INT,        		pulp_v2, NULL),
   DIRECT_BUILTIN1(dotpv4qi,         	dotsp4,     	RISCV_INT_FTYPE_V4QI_V4QI,       		pulp_v2, NULL),
@@ -5110,8 +5117,8 @@ static struct {
 	int 	Index;
 } Native_GOMP_Builtins[NATIVE_GOMP_LAST] = 
 {
-	{NULL, 0x02016000, 0x458},		// OMP Loop Chunk Size
-	{NULL, 0x02016000, 0x468},		// OMP Loop Start
+	{NULL, 0x00204000, 0x90},		// OMP Loop Chunk Size
+	{NULL, 0x00204000, 0x84},		// OMP Loop Start
 };
 
 unsigned int GetRemappedGompBuiltin(unsigned int ompcode, unsigned int def_ret)

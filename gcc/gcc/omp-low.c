@@ -256,6 +256,7 @@ struct omp_for_data
   struct omp_for_data_loop *loops;
 };
 
+static int FORCE_NT = 0;
 
 static splay_tree all_contexts;
 static int taskreg_nesting_level;
@@ -6681,10 +6682,14 @@ expand_omp_for_static_nochunk (struct omp_region *region,
     default:
       gcc_unreachable ();
     }
+if (FORCE_NT && gimple_omp_for_kind (fd->for_stmt)==GF_OMP_FOR_KIND_FOR) {
+  nthreads = build_int_cst (itype, 8);
+} else {
   nthreads = build_call_expr (nthreads, 0);
   nthreads = fold_convert (itype, nthreads);
   nthreads = force_gimple_operand_gsi (&gsi, nthreads, true, NULL_TREE,
 				       true, GSI_SAME_STMT);
+}
   threadid = build_call_expr (threadid, 0);
   threadid = fold_convert (itype, threadid);
   threadid = force_gimple_operand_gsi (&gsi, threadid, true, NULL_TREE,
@@ -7075,10 +7080,14 @@ expand_omp_for_static_chunk (struct omp_region *region,
     default:
       gcc_unreachable ();
     }
+if (FORCE_NT && gimple_omp_for_kind (fd->for_stmt)==GF_OMP_FOR_KIND_FOR) {
+  nthreads = build_int_cst (itype, 8);
+} else {
   nthreads = build_call_expr (nthreads, 0);
   nthreads = fold_convert (itype, nthreads);
   nthreads = force_gimple_operand_gsi (&gsi, nthreads, true, NULL_TREE,
 				       true, GSI_SAME_STMT);
+}
   threadid = build_call_expr (threadid, 0);
   threadid = fold_convert (itype, threadid);
   threadid = force_gimple_operand_gsi (&gsi, threadid, true, NULL_TREE,

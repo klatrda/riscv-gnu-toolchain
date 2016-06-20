@@ -183,7 +183,14 @@ along with GCC; see the file COPYING3.  If not see
 %{mrvc} %{mno-rvc} \
 %{msoft-float} %{mhard-float} \
 %{fPIC|fpic|fPIE|fpie:-fpic} \
+%{mchip=*} \
+%{mcpu=*} \
 %{march=*} \
+%{mL2=*} \
+%{mL1Cl=*} \
+%{mL1Fc=*} \
+%{mPE=*} \
+%{mFC=*} \
 %(subtarget_asm_spec)"
 
 /* Extra switches sometimes passed to the linker.  */
@@ -193,6 +200,15 @@ along with GCC; see the file COPYING3.  If not see
 %{!T:-dT riscv.ld} \
 %{m64:-melf64lriscv} \
 %{m32:-melf32lriscv} \
+%{mchip=*:--mchip=%*} \
+%{march=*:--march=%*} \
+%{mL2=*:--mL2=%*} \
+%{mL1Cl=*:--mL1Cl=%*} \
+%{mL1Fc=*:--mL1Fc=%*} \
+%{mPE=*:--mPE=%*} \
+%{mFC=*:--mFC=%*} \
+%{mWci:--mWci} \
+%{mEci:--mEci} \
 %{shared}"
 #endif  /* LINK_SPEC defined */
 
@@ -205,7 +221,6 @@ along with GCC; see the file COPYING3.  If not see
    program.
 
    Do not define this macro if it does not need to do anything.  */
-
 #define EXTRA_SPECS							\
   { "asm_abi_default_spec", "-" MULTILIB_ARCH_DEFAULT },		\
   SUBTARGET_EXTRA_SPECS

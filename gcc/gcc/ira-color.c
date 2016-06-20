@@ -220,6 +220,17 @@ static vec<ira_allocno_t> allocno_stack_vec;
 #define SORTGT(x,y) (((x) > (y)) ? 1 : -1)
 
 
+/* To control bug (?) fix on register allocation. When an allocno lives accross a call, if reg alloc
+   attempt to use a register in the call clobbered list the option is rejected. Shoud not happen but
+   seems to be driven by cost, normally cost of allocating a call clobbered reg should exceed the one of allocating
+   memory. For strange reasons in some cases this is not the case so avoid this situation by this fix
+*/
+
+static int BUG_FIX=1;
+static int TRACE=0;
+
+static void Debug_HR(HARD_REG_SET Vect);
+static void Debug_C_Cost(int *CV, int Class);
 
 /* Definition of vector of allocno hard registers.  */
 
@@ -1559,9 +1570,6 @@ update_conflict_hard_regno_costs (int *costs, enum reg_class aclass,
    This covers mostly cases when multi-register value should be
    aligned.  */
 
-static int ANUM=44;
-static int TRACE=0;
-static int BUG_FIX=1;
 static inline void
 get_conflict_and_start_profitable_regs (ira_allocno_t a, bool retry_p,
 					HARD_REG_SET *conflict_regs,
@@ -1590,7 +1598,6 @@ get_conflict_and_start_profitable_regs (ira_allocno_t a, bool retry_p,
 		       ALLOCNO_COLOR_DATA (a)->profitable_hard_regs);
 }
 
-void Debug_HR(HARD_REG_SET Vect);
 /* Return true if HARD_REGNO is ok for assigning to allocno A with
    PROFITABLE_REGS and whose objects have CONFLICT_REGS.  */
 static inline bool
@@ -1604,24 +1611,14 @@ check_hard_reg_p (ira_allocno_t a, int hard_regno,
   aclass = ALLOCNO_CLASS (a);
   mode = ALLOCNO_MODE (a);
 
-if (TRACE && a->num == ANUM) {
-	fprintf(stderr, "======================================================\n");
-	fprintf(stderr, "Allocno = %d, Checking Reg %s\n", ANUM, reg_names[hard_regno]);
-	fprintf(stderr, "Profitable Regs "); Debug_HR(profitable_regs);
-	fprintf(stderr, "Conflict Regs "); Debug_HR(*conflict_regs);
-	fprintf(stderr, "Prohibited "); Debug_HR(ira_prohibited_class_mode_regs[aclass][mode]);
-}
   if (TEST_HARD_REG_BIT (ira_prohibited_class_mode_regs[aclass][mode],
 			 hard_regno))
     return false;
-if (TRACE && a->num == ANUM) fprintf(stderr, "Not prohibited\n");
   /* Checking only profitable hard regs.  */
   if (! TEST_HARD_REG_BIT (profitable_regs, hard_regno))
     return false;
   nregs = hard_regno_nregs[hard_regno][mode];
   nwords = ALLOCNO_NUM_OBJECTS (a);
-if (TRACE && a->num == ANUM) fprintf(stderr, "Profitable, %d Regs in mode: %d, nwords: %d\n",
-			  nregs, mode, nwords);
   for (j = 0; j < nregs; j++)
     {
       int k;
@@ -1641,7 +1638,6 @@ if (TRACE && a->num == ANUM) fprintf(stderr, "Profitable, %d Regs in mode: %d, n
       if (k != set_to_test_end)
 	break;
     }
-if (TRACE && a->num==ANUM) fprintf(stderr, "Reg %s is %s\n", reg_names[hard_regno], (j==nregs)?"Good":"Bad");
   return j == nregs;
 }
 
@@ -1686,7 +1682,6 @@ calculate_saved_nregs (int hard_regno, machine_mode mode)
    hard register for allocnos connected by copies to improve a chance
    to coalesce insns represented by the copies when we assign hard
    registers to the allocnos connected by the copies.  */
-void Debug_C_Cost(int *CV, int Class);
 static bool
 assign_hard_reg (ira_allocno_t a, bool retry_p)
 {
@@ -1725,9 +1720,6 @@ assign_hard_reg (ira_allocno_t a, bool retry_p)
   ira_allocate_and_copy_costs (&ALLOCNO_UPDATED_HARD_REG_COSTS (a),
 			       aclass, ALLOCNO_HARD_REG_COSTS (a));
 
-if (TRACE && a->num==ANUM) {
-fprintf(stderr, "Initial costs:"); Debug_C_Cost(ALLOCNO_HARD_REG_COSTS (a), aclass);
-}
   a_costs = ALLOCNO_UPDATED_HARD_REG_COSTS (a);
 #ifdef STACK_REGS
   no_stack_reg_p = no_stack_reg_p || ALLOCNO_TOTAL_NO_STACK_REG_P (a);
@@ -1744,10 +1736,6 @@ fprintf(stderr, "Initial costs:"); Debug_C_Cost(ALLOCNO_HARD_REG_COSTS (a), acla
 	costs[i] += cost;
 	full_costs[i] += cost;
       }
-if (TRACE && a->num==ANUM) {
-fprintf(stderr, "Costs:"); Debug_C_Cost(costs, aclass);
-fprintf(stderr, "Full Costs:"); Debug_C_Cost(full_costs, aclass);
-}
   nwords = ALLOCNO_NUM_OBJECTS (a);
   curr_allocno_process++;
   for (word = 0; word < nwords; word++)
@@ -1877,13 +1865,12 @@ fprintf(stderr, "Full Costs:"); Debug_C_Cost(full_costs, aclass);
       if (! check_hard_reg_p (a, hard_regno,
 			      conflicting_regs, profitable_hard_regs))
 	continue;
-      if (a->calls_crossed_num && (hard_regno>=0) && TEST_HARD_REG_BIT(a->crossed_calls_clobbered_regs, hard_regno)) {
+      if (ALLOCNO_CALLS_CROSSED_NUM(a) && (hard_regno>=0) && TEST_HARD_REG_BIT(ALLOCNO_CROSSED_CALLS_CLOBBERED_REGS(a), hard_regno)) {
          if (TRACE) fprintf(stderr, "AssignHardReg:Discarding %s in allocno a%d because it is call clobbered\n", reg_names[hard_regno], a->num);
 	 if (BUG_FIX) continue;
       }
       cost = costs[i];
       full_cost = full_costs[i];
-if (TRACE && a->num==ANUM) fprintf(stderr, "Initial: Cost: %d, Full Cost: %d\n", cost, full_cost);
       if (!HONOR_REG_ALLOC_ORDER)
 	{
 	  if ((saved_nregs = calculate_saved_nregs (hard_regno, mode)) != 0)
@@ -1898,18 +1885,15 @@ if (TRACE && a->num==ANUM) fprintf(stderr, "Initial: Cost: %d, Full Cost: %d\n",
 	    full_cost += add_cost;
 	  }
 	}
-if (TRACE && a->num==ANUM) fprintf(stderr, "Re eval: Cost: %d, Full Cost: %d, min_cost: %d, min_full_cost: %d\n", cost, full_cost, min_cost, min_full_cost);
       if (min_cost > cost)
 	min_cost = cost;
       if (min_full_cost > full_cost)
 	{
-if (TRACE && a->num==ANUM) fprintf(stderr, "Reg %s wins with new min cost of %d\n", (hard_regno>=0)?reg_names[hard_regno]:"<Nil>", min_full_cost);
 	  min_full_cost = full_cost;
 	  best_hard_regno = hard_regno;
 	  ira_assert (hard_regno >= 0);
 	}
     }
-if (TRACE && a->num==ANUM) fprintf(stderr, "Best Reg %s wins with new min cost of %d, mem_cost: %d\n", (best_hard_regno>=0)?reg_names[best_hard_regno]:"<Nil>", min_full_cost, mem_cost);
   if (min_full_cost > mem_cost)
     {
       if (! retry_p && internal_flag_ira_verbose > 3 && ira_dump_file != NULL)
@@ -1920,9 +1904,9 @@ if (TRACE && a->num==ANUM) fprintf(stderr, "Best Reg %s wins with new min cost o
  fail:
   if (best_hard_regno >= 0)
     {
-      if (a->calls_crossed_num && TEST_HARD_REG_BIT(a->crossed_calls_clobbered_regs, best_hard_regno)) {
-         if (!BUG_FIX) fprintf(stderr, "AssignHardReg: Wrong allocation of reg:%s to R%d for allocno:a%d. Reg %s is call clobbered\n",
-			       reg_names[best_hard_regno], a->regno, a->num, reg_names[best_hard_regno]);
+      if (!BUG_FIX && ALLOCNO_CALLS_CROSSED_NUM(a) && TEST_HARD_REG_BIT(ALLOCNO_CROSSED_CALLS_CLOBBERED_REGS(a), best_hard_regno)) {
+         fprintf(stderr, "AssignHardReg: Wrong allocation of reg:%s to R%d for allocno:a%d. Reg %s is call clobbered\n",
+		          reg_names[best_hard_regno], a->regno, a->num, reg_names[best_hard_regno]);
       }
       for (i = hard_regno_nregs[best_hard_regno][mode] - 1; i >= 0; i--)
 	allocated_hardreg_p[best_hard_regno + i] = true;
@@ -2832,7 +2816,7 @@ improve_allocation (void)
 	  if (! check_hard_reg_p (a, hregno,
 				  conflicting_regs, profitable_hard_regs))
 	    continue;
-          if (a->calls_crossed_num && (hregno>=0) && TEST_HARD_REG_BIT(a->crossed_calls_clobbered_regs, hregno)) {
+          if (ALLOCNO_CALLS_CROSSED_NUM(a) && (hregno>=0) && TEST_HARD_REG_BIT(ALLOCNO_CROSSED_CALLS_CLOBBERED_REGS(a), hregno)) {
               if (TRACE) fprintf(stderr, "ImproveAllocation: Discarding %s in allocno a%d because it is call clobbered\n", reg_names[hregno], a->num);
 	      if (BUG_FIX) continue;
           }
@@ -2913,7 +2897,7 @@ improve_allocation (void)
 				conflicting_regs, profitable_hard_regs)
 	      && min_cost > costs[hregno])
 	    {
-	      if (a->calls_crossed_num && (hregno>=0) && TEST_HARD_REG_BIT(a->crossed_calls_clobbered_regs, hregno)) {
+	      if (ALLOCNO_CALLS_CROSSED_NUM(a) && (hregno>=0) && TEST_HARD_REG_BIT(ALLOCNO_CROSSED_CALLS_CLOBBERED_REGS(a), hregno)) {
 		      if (TRACE) fprintf(stderr, "ImproveAllocation(2): Discarding %s in allocno a%d because it is call clobbered\n", reg_names[hregno], a->num);
 	              if (BUG_FIX) continue;
 	      }
@@ -2926,9 +2910,9 @@ improve_allocation (void)
 	   by spilling some conflicting allocnos does not improve the
 	   allocation cost.  */
 	continue;
-      if (a->calls_crossed_num && TEST_HARD_REG_BIT(a->crossed_calls_clobbered_regs, best)) {
-         if (!BUG_FIX) fprintf(stderr, "ImproveAllocation: Wrong allocation of reg:%s to R%d for allocno:a%d. Reg %s is call clobbered\n",
-				  reg_names[best], a->regno, a->num, reg_names[best]);
+      if (!BUG_FIX && ALLOCNO_CALLS_CROSSED_NUM(a) && (best >= 0) && TEST_HARD_REG_BIT(ALLOCNO_CROSSED_CALLS_CLOBBERED_REGS(a), best)) {
+         fprintf(stderr, "ImproveAllocation: Wrong allocation of reg:%s to R%d for allocno:a%d. Reg %s is call clobbered\n",
+			  reg_names[best], a->regno, a->num, reg_names[best]);
       }
       nregs = hard_regno_nregs[best][mode];
       /* Now spill conflicting allocnos which contain a hard register
@@ -4901,7 +4885,7 @@ ira_color (void)
     fast_allocation ();
 }
 
-void Debug_HR(HARD_REG_SET Vect)
+static void Debug_HR(HARD_REG_SET Vect)
 
 {
 	int i;
@@ -4914,7 +4898,7 @@ void Debug_HR(HARD_REG_SET Vect)
 	fprintf(stderr, "\n");
 }
 
-void Debug_C_Cost(int *CV, int Class)
+static void Debug_C_Cost(int *CV, int Class)
 
 {
 	int i;

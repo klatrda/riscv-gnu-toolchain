@@ -33,6 +33,8 @@
 
 #include "elf/riscv.h"
 #include "opcode/riscv.h"
+#define _WITH_PULP_CHIP_INFO_FUNCT_
+#include "../../../gcc/gcc/config/riscv/riscv-opts.h"
 
 #include <execinfo.h>
 #include <stdint.h>
@@ -82,6 +84,11 @@ static struct riscv_set_options riscv_opts =
   0,	/* pic */
   0,	/* rvc */
 };
+
+static struct Pulp_Target_Chip Pulp_Chip = {PULP_CHIP_NONE, PULP_NONE, -1, -1, -1, -1, -1};
+
+static void pulp_set_chip(const char *arg);
+static void pulp_add_chip_info(void);
 
 static void
 riscv_set_rvc (bfd_boolean rvc_value)
@@ -190,15 +197,46 @@ riscv_set_arch (const char *arg)
     {
       if (*p == 'X')
 	{
+	  int Len;
 	  char *subset = xstrdup (p), *q = subset;
 
 	  while (*++q != '\0' && *q != '_')
 	    ;
 	  *q = '\0';
 
-	  if (extension)
-	    as_fatal ("only one eXtension is supported (found %s and %s)",
-		      extension, subset);
+	  if (extension) as_fatal ("only one eXtension is supported (found %s and %s)", extension, subset);
+
+	switch (PulpDecodeCpu(p+1, &Len)) {
+		case PULP_RISCV:
+                	if (Pulp_Chip.processor == PULP_NONE || Pulp_Chip.processor == PULP_RISCV) Pulp_Chip.processor = PULP_RISCV;
+                	else as_fatal("-Xriscv: pulp architecture is already defined as %s", PulpProcessorImage(Pulp_Chip.processor));
+			break;
+		case PULP_V0:
+                	if (Pulp_Chip.processor == PULP_NONE || Pulp_Chip.processor == PULP_V0) Pulp_Chip.processor = PULP_V0;
+                	else as_fatal("-Xpulpv0: pulp architecture is already defined as %s", PulpProcessorImage(Pulp_Chip.processor));
+			break;
+		case PULP_V1:
+                	if (Pulp_Chip.processor == PULP_NONE || Pulp_Chip.processor == PULP_V1) Pulp_Chip.processor = PULP_V1;
+                	else as_fatal("-Xpulpv1: pulp architecture is already defined as %s", PulpProcessorImage(Pulp_Chip.processor));
+			break;
+		case PULP_V2:
+                	if (Pulp_Chip.processor == PULP_NONE || Pulp_Chip.processor == PULP_V2) Pulp_Chip.processor = PULP_V2;
+                	else as_fatal("-Xpulpv2: pulp architecture is already defined as %s", PulpProcessorImage(Pulp_Chip.processor));
+			break;
+		case PULP_V3:
+                	if (Pulp_Chip.processor == PULP_NONE || Pulp_Chip.processor == PULP_V3) Pulp_Chip.processor = PULP_V3;
+                	else as_fatal("-Xpulpv3: pulp architecture is already defined as %s", PulpProcessorImage(Pulp_Chip.processor));
+			break;
+		case PULP_NONE:
+			if (Len==0) {
+                		as_fatal ("-march=%s: unsupported ISA substring %s", arg, p);
+                		return;
+			}
+			break;
+		default:
+			break;
+
+	}
 	  extension = subset;
 	  riscv_add_subset (subset);
 	  p += strlen (subset);
@@ -226,7 +264,32 @@ riscv_set_arch (const char *arg)
     /* Add RVC anyway.  -m[no-]rvc toggles its availability.  */
     riscv_add_subset ("C");
 
+    if (Pulp_Chip.processor == PULP_NONE) Pulp_Chip.processor = PULP_RISCV;
+
   free (uppercase);
+}
+
+static void pulp_set_chip(const char *arg)
+
+{
+  char *uppercase = xstrdup (arg);
+  char *p = uppercase;
+  int i;
+
+  for (i = 0; uppercase[i]; i++) uppercase[i] = TOUPPER (uppercase[i]);
+
+  if (strncmp (p, "PULPINO", 7) == 0) {
+	riscv_set_arch ("IXpulpv1");
+	UpdatePulpChip(&Pulp_Chip, &Pulp_Defined_Chips[PULP_CHIP_PULPINO]);
+  } else if (strncmp (p, "HONEY", 5) == 0) {
+	riscv_set_arch ("IXpulpv0");
+	UpdatePulpChip(&Pulp_Chip, &Pulp_Defined_Chips[PULP_CHIP_HONEY]);
+  } else if (strncmp (p, "GAP8", 4) == 0) {
+	riscv_set_arch ("IXgap8");
+	UpdatePulpChip(&Pulp_Chip, &Pulp_Defined_Chips[PULP_CHIP_GAP8]);
+  } else {
+	as_fatal ("unsupported pulp chip %s", arg);
+  }
 }
 
 /* handle of the OPCODE hash table */
@@ -506,7 +569,7 @@ validate_riscv_insn (const struct riscv_opcode *opc)
 
   if ((used_bits & opc->match) != (opc->match & required_bits))
     {
-      as_bad (_("internal: bad RISC-V opcode (mask error): %s %s. Used bits: %lX, Match bits: %lX, Required bits: %lX, Eval: %llX, Insn width=%d"),
+      as_bad (_("internal: bad RISC-V opcode (mask error): %s %s. Used bits: %lX, Match bits: %lX, Required bits: %lX, Eval: %lX, Insn width=%d"),
 	      opc->name, opc->args, used_bits, opc->match, required_bits, (used_bits & opc->match), insn_width);
       return 0;
     }
@@ -688,6 +751,56 @@ md_begin (void)
 
   /* Set the default alignment for the text section.  */
   record_alignment (text_section, riscv_opts.rvc ? 1 : 2);
+}
+
+
+#define PULPINFO_NAME "Pulp_Info"
+#define PULPINFO_NAMESZ 10
+#define PULPINFO_TYPE 1
+
+static void pulp_add_chip_info(void)
+
+{
+	segT Pulp_Chip_Info;
+	segT old_section = now_seg;
+	int old_subsection = now_subseg;
+	char *p;
+	char LineBuffer[512];
+	unsigned int Len=0;
+	char *Msg = NULL;
+
+	PulpChipInfoImage(&Pulp_Chip, LineBuffer);
+	Len = strlen(LineBuffer);
+	Msg = (char *) xmalloc(Len+5);
+	strcpy(Msg, LineBuffer);
+	Len++;
+	do Msg[Len++] = 0; while ((Len & 3) != 0);
+
+	Pulp_Chip_Info = subseg_new(".Pulp_Chip.Info", 0);
+	bfd_set_section_flags(stdoutput, Pulp_Chip_Info, SEC_READONLY | SEC_HAS_CONTENTS);
+
+	/* Follow the standard note section layout: First write the length of the name string.  */
+	p = frag_more(4);
+	md_number_to_chars (p, (valueT) PULPINFO_NAMESZ, 4);
+
+	/* Next comes the length of the "descriptor", i.e., the actual data.  */
+	p = frag_more(4);
+	md_number_to_chars (p, (valueT) Len, 4);
+
+	/* Write the note type.  */
+	p = frag_more(4);
+	md_number_to_chars (p, (valueT) PULPINFO_TYPE, 4);
+
+	/* Write the name field.  */
+	p = frag_more (PULPINFO_NAMESZ);
+	memcpy (p, PULPINFO_NAME, PULPINFO_NAMESZ);
+
+	/* Finally, write the descriptor.  */
+	p = frag_more (Len);
+	memcpy (p, Msg, Len);
+
+	free(Msg);
+	subseg_set (old_section, old_subsection);
 }
 
 /* Output an instruction.  IP is the instruction information.
@@ -1902,6 +2015,13 @@ enum options
     OPTION_MHARD_FLOAT,
     OPTION_MRVC,
     OPTION_MNO_RVC,
+    OPTION_L2,
+    OPTION_L1CL,
+    OPTION_L1FC,
+    OPTION_PE,
+    OPTION_FC,
+    OPTION_CPU,
+    OPTION_CHIP,
     OPTION_END_OF_ENUM
   };
 
@@ -1917,6 +2037,13 @@ struct option md_longopts[] =
   {"mno-rvc", no_argument, NULL, OPTION_MNO_RVC},
   {"msoft-float", no_argument, NULL, OPTION_MSOFT_FLOAT},
   {"mhard-float", no_argument, NULL, OPTION_MHARD_FLOAT},
+  {"mL2", required_argument, NULL, OPTION_L2},
+  {"mL1Cl", required_argument, NULL, OPTION_L1CL},
+  {"mL1Fc", required_argument, NULL, OPTION_L1FC},
+  {"mPE", required_argument, NULL, OPTION_PE},
+  {"mFC", required_argument, NULL, OPTION_FC},
+  {"mcpu", required_argument, NULL, OPTION_CPU},
+  {"mchip", required_argument, NULL, OPTION_CHIP},
 
   {NULL, no_argument, NULL, 0}
 };
@@ -1925,6 +2052,7 @@ size_t md_longopts_size = sizeof (md_longopts);
 int
 md_parse_option (int c, char *arg)
 {
+  int Arg;
   switch (c)
     {
     case OPTION_MRVC:
@@ -1961,6 +2089,31 @@ md_parse_option (int c, char *arg)
 
     case OPTION_PIC:
       riscv_opts.pic = TRUE;
+      break;
+    case OPTION_L2:
+	Arg = atoi(arg);
+	if (Pulp_Chip.Pulp_L2_Size == -1 || Pulp_Chip.Pulp_L2_Size == Arg) Pulp_Chip.Pulp_L2_Size = Arg;
+      break;
+    case OPTION_L1CL:
+	Arg = atoi(arg);
+	if (Pulp_Chip.Pulp_L1_Cluster_Size == -1 || Pulp_Chip.Pulp_L1_Cluster_Size == Arg) Pulp_Chip.Pulp_L1_Cluster_Size = Arg;
+      break;
+    case OPTION_L1FC:
+	Arg = atoi(arg);
+	if (Pulp_Chip.Pulp_L1_FC_Size == -1 || Pulp_Chip.Pulp_L1_FC_Size == Arg) Pulp_Chip.Pulp_L1_FC_Size = Arg;
+      break;
+    case OPTION_PE:
+	Arg = atoi(arg);
+	if (Pulp_Chip.Pulp_PE == -1 || Pulp_Chip.Pulp_PE == Arg) Pulp_Chip.Pulp_PE = Arg;
+      break;
+    case OPTION_FC:
+	Arg = atoi(arg);
+	if (Pulp_Chip.Pulp_FC == -1 || Pulp_Chip.Pulp_FC == Arg) Pulp_Chip.Pulp_FC = Arg;
+      break;
+    case OPTION_CPU:
+      break;
+    case OPTION_CHIP:
+      pulp_set_chip(arg);
       break;
 
     default:
@@ -2532,6 +2685,14 @@ tc_riscv_regname_to_dw2regnum (char *regname)
 
   as_bad (_("unknown register `%s'"), regname);
   return -1;
+}
+
+
+// void pulp_md_end(void);
+void pulp_md_end(void)
+
+{
+    pulp_add_chip_info();
 }
 
 void

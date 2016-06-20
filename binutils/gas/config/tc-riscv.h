@@ -101,4 +101,8 @@ extern unsigned xlen;
 #define elf_tc_final_processing riscv_elf_final_processing
 extern void riscv_elf_final_processing (void);
 
+extern void pulp_md_end (void);
+#define md_end()        pulp_md_end()
+
+
 #endif /* TC_RISCV */
