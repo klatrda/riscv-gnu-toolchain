@@ -25,6 +25,13 @@
 #define _PULP_CHIP_OPTIONS_
 #include <string.h>
 
+enum Pulp_Chip_Config_Type
+{
+	PULP_CHIP_CONFIG_ALL,
+	PULP_CHIP_CONFIG_FC,
+	PULP_CHIP_CONFIG_CLUSTER
+};
+
 enum Pulp_Processor_Type
 {
   PULP_NONE,

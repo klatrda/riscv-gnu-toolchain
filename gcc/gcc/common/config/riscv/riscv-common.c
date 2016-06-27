@@ -158,21 +158,30 @@ riscv_handle_option (struct gcc_options *opts,
 {
   switch (decoded->opt_index)
     {
+	int Defined;
     case OPT_march_:
       riscv_parse_arch_string (decoded->arg, &opts->x_target_flags);
       return true;
     case OPT_mchip_:
+	Defined=0;
 	switch (decoded->value) {
 		case PULP_CHIP_NONE:
 			break;
 		case PULP_CHIP_HONEY:
-        		riscv_parse_arch_string ("IXpulpv0",  &opts->x_target_flags);
+        		riscv_parse_arch_string ("IXpulpv0",  &opts->x_target_flags); Defined=1;
 			break;
 		case PULP_CHIP_PULPINO:
-        		riscv_parse_arch_string ("IXpulpv1",  &opts->x_target_flags);
+        		riscv_parse_arch_string ("IXpulpv1",  &opts->x_target_flags); Defined=1;
 			break;
 		default:
 			break;
+	}
+	if (Defined) {
+		_Pulp_FC = Pulp_Defined_Chips[decoded->value].Pulp_FC;
+		_Pulp_PE = Pulp_Defined_Chips[decoded->value].Pulp_PE;
+		_Pulp_L2_Size = Pulp_Defined_Chips[decoded->value].Pulp_L2_Size;
+		_Pulp_L1_Cluster_Size = Pulp_Defined_Chips[decoded->value].Pulp_L1_Cluster_Size;
+		_Pulp_L1_FC_Size = Pulp_Defined_Chips[decoded->value].Pulp_L1_FC_Size;
 	}
       return true;
     case OPT_mcpu_:

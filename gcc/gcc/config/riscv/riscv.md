@@ -63,10 +63,14 @@
   UNSPEC_NOP
   UNSPEC_READ_EVU
   UNSPEC_OFFSETED_READ
+  UNSPEC_OFFSETED_READ_OMP
   UNSPEC_OMP_PULP_BARRIER
   UNSPEC_OMP_PULP_CRITICAL_START
   UNSPEC_OMP_PULP_CRITICAL_END
+  UNSPEC_WRITESI_VOL
   UNSPEC_WRITESI
+  UNSPEC_READSI_VOL
+  UNSPEC_READSI
 
   UNSPEC_SPR_READ
   UNSPEC_SPR_WRITE
@@ -2866,15 +2870,51 @@
 ;;   "* return riscv_explicit_load_store(operands[0], gen_rtx_REG(SImode, 0), 0x2016448, 1);"
 ;; )
 
+(define_insn "writesivol"
+  [(unspec_volatile [(match_operand:SI 0 "register_operand" "r,r")
+		     (match_operand:SI 1 "register_operand" "r,r")
+		     (match_operand:SI 2 "nonmemory_operand" "r,i")] UNSPEC_WRITESI_VOL)]
+ "(Pulp_Cpu>=PULP_V2)"
+  "@
+   p.sw \t%0,%2(%1)\t# Write volatile
+   p.sw \t%0,%2(%1)\t# Write volatile"
+  [(set_attr "type" "store,store")
+   (set_attr "mode" "SI,SI")]
+)
+
 (define_insn "writesi"
   [(unspec_volatile [(match_operand:SI 0 "register_operand" "r,r")
 		     (match_operand:SI 1 "register_operand" "r,r")
 		     (match_operand:SI 2 "nonmemory_operand" "r,i")] UNSPEC_WRITESI)]
  "(Pulp_Cpu>=PULP_V2)"
   "@
-   p.sw \t%0,%2(%1)
-   p.sw \t%0,%2(%1)"
+   p.sw \t%0,%2(%1)\t# Write non volatile
+   p.sw \t%0,%2(%1)\t# Write non volatile"
   [(set_attr "type" "store,store")
+   (set_attr "mode" "SI,SI")]
+)
+
+(define_insn "readsivol"
+  [(unspec_volatile [(match_operand:SI 0 "register_operand" "r,r")
+		     (match_operand:SI 1 "register_operand" "r,r")
+		     (match_operand:SI 2 "nonmemory_operand" "r,i")] UNSPEC_READSI_VOL)]
+ "(Pulp_Cpu>=PULP_V2)"
+  "@
+   p.lw \t%0,%2(%1)\t# Read volatile
+   p.lw \t%0,%2(%1)\t# Read volatile"
+  [(set_attr "type" "load,load")
+   (set_attr "mode" "SI,SI")]
+)
+
+(define_insn "readsi"
+  [(unspec_volatile [(match_operand:SI 0 "register_operand" "r,r")
+		     (match_operand:SI 1 "register_operand" "r,r")
+		     (match_operand:SI 2 "nonmemory_operand" "r,i")] UNSPEC_READSI)]
+ "(Pulp_Cpu>=PULP_V2)"
+  "@
+   p.lw \t%0,%2(%1)\t# Read non volatile
+   p.lw \t%0,%2(%1)\t# Read non volatile"
+  [(set_attr "type" "load,load")
    (set_attr "mode" "SI,SI")]
 )
 
@@ -2885,7 +2925,7 @@
 	rtx Reg1 = gen_reg_rtx (SImode);
 	rtx Reg2 = gen_reg_rtx (SImode);
 	emit_insn(gen_movsi(Reg1, gen_rtx_CONST_INT(SImode, 0x00204000)));
-	emit_insn(gen_writesi(Reg2, Reg1, gen_rtx_CONST_INT(SImode, 0xc0)));
+	emit_insn(gen_writesivol(Reg2, Reg1, gen_rtx_CONST_INT(SImode, 0xc0)));
 	DONE;
 }
 )
@@ -2905,6 +2945,24 @@
   ]
   "(Pulp_Cpu>=PULP_V2)"
   "lw \t%0,%2(%1)\t# Volatile Load offseted"
+)
+
+(define_insn "OffsetedReadOMP"
+  [(set (match_operand:SI 0 "register_operand" "=r")
+        (unspec_volatile:SI [(match_operand:SI 1 "register_operand" "r") (match_operand:SI 2 "immediate_operand" "i")] UNSPEC_OFFSETED_READ_OMP)
+   )
+  ]
+  "(Pulp_Cpu>=PULP_V2)"
+  "lw \t%0,%2(%1)\t# Volatile Load offseted (OMP)"
+)
+
+(define_insn "OffsetedReadNonVol"
+  [(set (match_operand:SI 0 "register_operand" "=r")
+	(mem:SI (plus:SI (match_operand:SI 1 "register_operand" "r") (match_operand:SI 2 "immediate_operand" "i")))
+   )
+  ]
+  "(Pulp_Cpu>=PULP_V2)"
+  "lw \t%0,%2(%1)\t# Non volatile Load offseted"
 )
 
 ;; Post modified load and store

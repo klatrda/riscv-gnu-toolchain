@@ -2662,6 +2662,13 @@ RISC-V options:\n\
   -m64           assemble RV64 code (default)\n\
   -fpic          generate position-independent code\n\
   -fno-pic       don't generate position-independent code (default)\n\
+  -mL2           set pulp L2 size to Value\n\
+  -mL1Cl=Value   set pulp cluster L1 size to Value\n\
+  -mL1Fc=Value   set pulp fabric controller L1 size, if any, to Value\n\
+  -mPE=Value     define number of processing element in Pulp cluster\n\
+  -mFC=Value     if Value=0 assume there is no fabric controler, if Value!=0 assume there is one FC\n\
+  -mchip=Name    define targeted chip as Name\n\
+  -march=ISA	 Use processor correponding to ISA\n\
 "));
 }
 

@@ -4605,9 +4605,24 @@ riscv_issue_rate (void)
   return tune_info->issue_rate;
 }
 
-/* This structure describes a single built-in function.  */
-typedef int (*BuiltinChecker)(int Code, int Narg, ...);
+struct PostExtractAction {
+	int Yes;
+	int Size;
+	int Off;
+	int Sign;
+};
 
+struct ExtraBuiltinImmArg {
+	int Count;
+	int IsReg[4];
+	int Pos[4];
+	int Value[4];
+	struct PostExtractAction PostExtract;
+};
+
+typedef int (*BuiltinChecker)(int Code, int BuiltinIndex, struct ExtraBuiltinImmArg *ExtraImmArg, int Narg, ...);
+
+/* This structure describes a single built-in function.  */
 struct riscv_builtin_description {
   /* The code of the main .md file instruction.  See riscv_builtin_type
      for more information.  */
@@ -4664,180 +4679,7 @@ riscv_builtin_avail_pulp_vall (void)
   return 0;
 }
 
-static int CheckBuiltin(int Code, int Narg, ...)
-
-{
-	int i;
-	rtx Op[6] = {NULL, NULL, NULL, NULL, NULL, NULL};
-	const char *Diag=NULL;
-	va_list ap;
-
-	va_start(ap, Narg);
-	for (i=0; i<Narg; i++) Op[i] = va_arg(ap, rtx);
-	va_end(ap);
-
-	switch (Code) {
-		/* Op3 const and in 0..31, Op4 const and == 2^(Op3 - 1) */
-		case CODE_FOR_macsRNr_si3:
-		case CODE_FOR_macuRNr_si3:
-		case CODE_FOR_machhsRNr_si3:
-		case CODE_FOR_machhuRNr_si3:
-			if (Op[3] && (GET_CODE(Op[3]) == CONST_INT) && Op[4] && (GET_CODE(Op[4]) == CONST_INT)) {
-				int Norm = INTVAL (Op[3]);
-				int Round = INTVAL (Op[4]);
-				if (Norm >= 0 && Norm <= 31) {
-					if ((1 << (Norm - 1)) == Round) return 1;
-				}
-			}
-			Diag = "__builtin_pulp_mac{hh,}{s,u}NRr (X, Y, Acc, Norm, Round) expects Norm and Round cst, Norm<=31, Round==2^(Norm-1)";
-			break;
-		/* Op2 const and in 0..31, Op3 const and == 2^(Op2 - 1) */
-		case CODE_FOR_mulsRNr_si3:
-		case CODE_FOR_muluRNr_si3:
-		case CODE_FOR_mulhhsRNr_si3:
-		case CODE_FOR_mulhhuRNr_si3:
-			Diag = "__builtin_pulp_mul{hh,}{s,u}NRr (X, Y, Norm, Round) expects Norm and Round cst, Norm<=31, Round==2^(Norm-1)";
-		case CODE_FOR_addRN_si3:
-		case CODE_FOR_addRNu_si3:
-		case CODE_FOR_subRN_si3:
-		case CODE_FOR_subRNu_si3:
-			if (Op[2] && (GET_CODE(Op[2]) == CONST_INT) && Op[3] && (GET_CODE(Op[3]) == CONST_INT)) {
-				int Norm = INTVAL (Op[2]);
-				int Round = INTVAL (Op[3]);
-				if (Norm >= 0 && Norm <= 31) {
-					if ((1 << (Norm - 1)) == Round) return 1;
-				}
-			}
-			if (Diag == NULL)
-				Diag = "__builtin_pulp_{add,addu,sub}{hh,}NRr (X, Y, Norm, Round) expects Norm and Round cst, Norm<=31, Round==2^(Norm-1)";
-			break;
-		/* Op3 const and in 0..31 */
-		case CODE_FOR_macsNr_si3:
-		case CODE_FOR_macuNr_si3:
-		case CODE_FOR_machhsNr_si3:
-		case CODE_FOR_machhuNr_si3:
-			if (Op[3] && (GET_CODE(Op[3]) == CONST_INT)) {
-				int Norm = INTVAL (Op[3]);
-				if (Norm >= 0 && Norm <= 31) return 1;
-			}
-			Diag = "__builtin_pulp_mac{hh,}{s,u}NRr (X, Y, Acc, Norm, Round) expects Norm and Round cst, Norm<=31, Round==2^(Norm-1)";
-			break;
-		/* Op2 const and in 0..31 */
-		case CODE_FOR_mulsNr_si3:
-		case CODE_FOR_muluNr_si3:
-		case CODE_FOR_mulhhsNr_si3:
-		case CODE_FOR_mulhhuNr_si3:
-			Diag = "__builtin_pulp_mul{hh,}{s,u}Nr (X, Y, Norm) expects Norm cst, Norm<=31";
-		case CODE_FOR_addN_si3:
-		case CODE_FOR_addNu_si3:
-		case CODE_FOR_subN_si3:
-		case CODE_FOR_subNu_si3:
-			if (Op[2] && (GET_CODE(Op[2]) == CONST_INT)) {
-				int Norm = INTVAL (Op[2]);
-				if (Norm >= 0 && Norm <= 31) return 1;
-			}
-			if (Diag==NULL) Diag = "__builtin_pulp_{add,addu,sub}Nr (X, Y, Norm) expects Norm cst, Norm<=31";
-			break;
-		/* Op1 const, Op2 const, Op1==-2^(N-1), Op2==2^(N-1)-1 */
-		case CODE_FOR_clip_minmax:
-			if (Op[1] && (GET_CODE(Op[1]) == CONST_INT) && Op[2] && (GET_CODE(Op[2]) == CONST_INT)) {
-				int i;
-				int Min = INTVAL (Op[1]);
-				int Max = INTVAL (Op[2]);
-				for (i = 0; i < 30; i ++) if ((Max == (1 << i) - 1) && (Min == - (1 << i))) return 1;
-			}
-			Diag = "__builtin_pulp_clip (X, Min, Max) expects Min and Max cst, Min=-2^(N-1), Max=2^(N-1)-1";
-			break;
-		/* Op1 const, Op2 const, Op1==0, Op2==2^(N-1)-1 */
-		case CODE_FOR_clipu_minmax:
-			if (Op[1] && (GET_CODE(Op[1]) == CONST_INT) && Op[2] && (GET_CODE(Op[2]) == CONST_INT)) {
-				int i;
-				int Min = INTVAL (Op[1]);
-				int Max = INTVAL (Op[2]);
-				if (Min==0) for (i = 0; i < 30; i ++) if ((Max == (1 << i) - 1)) return 1;
-			}
-			Diag = "__builtin_pulp_clipu (X, Min, Max) expects Min and Max cst, Min=0, Max=2^(N-1)-1";
-			break;
-		/* Op1 const > 0, Op2 const >= 0, (Op1+Op2)<32 */
-		case CODE_FOR_extvsi:
-		case CODE_FOR_extzvsi:
-			if (Op[1] && (GET_CODE(Op[1]) == CONST_INT) && Op[2] && (GET_CODE(Op[2]) == CONST_INT)) {
-				int Size   = INTVAL (Op[1]);
-				int Offset = INTVAL (Op[2]);
-				if (Size > 0 && Offset >=0 && ((Size+Offset)<=32)) return 1;
-			}
-			Diag = "__builtin_pulp_bextract(X, Size, Offste) Expects Size and Offset immediate constants, Size>0, Offset>=0, (Size+Offset)<=32";
-			break;
-		/* Op0 const > 0, Op1 const >= 0, (Op0+Op1)<32 */
-		/* Op0 -> Target
-		   Op1 -> ~Mask
-		   Op2 -> InsVal
-		   Op3 -> Mask
-		   Op4 -> Off
-		*/
-		case CODE_FOR_invsipat1:
-			if (Op[1] && (GET_CODE(Op[1]) == CONST_INT) && Op[3] && (GET_CODE(Op[3]) == CONST_INT) &&
-			    Op[4] && (GET_CODE(Op[4]) == CONST_INT)) {
-				unsigned int Mask   = UINTVAL (Op[3]);
-				unsigned int MaskBar= UINTVAL (Op[1]);
-				unsigned int Size=0;
-				unsigned int Offset = UINTVAL (Op[4]);
-				int i;
-				for (i=Offset; i<32; i++, Size++) if (((1<<i) & Mask) == 0) break;
-				if ((MaskBar == ~Mask) && (Offset <= 31) &&
-				    ((unsigned int) (((1<<Size) - 1) << Offset) == Mask)) return 1;
-			}
-			Diag = "__builtin_pulp_binsert (Target, MaskBar, InsVal, Size, Mask, Off) expects Off,Mask,MaskBar cst, Size>0, Off>=0, (Off+Size)<=32";
-			break;
-		case CODE_FOR_load_evt_unit:
-			if (Op[1] && (GET_CODE(Op[1]) == CONST_INT)) return 1;
-			Diag = "__builtin_event_unit_read(base, offset), offset expected to be immediate value";
-			break;
-		case CODE_FOR_read_spr:
-			if (Op[0] && (GET_CODE(Op[0]) == CONST_INT)) {
-				unsigned int Reg = UINTVAL(Op[0]);
-				if (Reg <= 4091) return 1;
-			}
-			Diag = "__builtin_pulp_spr_read(Spr) expects Spr to be immediate and in [0..4091]";
-			break;
-		case CODE_FOR_write_spr:
-			if (Op[0] && (GET_CODE(Op[0]) == CONST_INT)) {
-				unsigned int Reg = UINTVAL(Op[0]);
-				if (Reg <= 4091) return 1;
-			}
-			Diag = "__builtin_pulp_spr_write(Spr, Value) expects Spr to be immediate and in [0..4091]";
-			break;
-		case CODE_FOR_spr_bit_set:
-			if (Op[0] && (GET_CODE(Op[0]) == CONST_INT)) {
-				unsigned int Reg = UINTVAL(Op[0]);
-				if (Reg <= 4091) return 1;
-			}
-			Diag = "__builtin_pulp_spr_bit_set(Spr, Value) expects Spr to be immediate and in [0..4091]";
-			break;
-		case CODE_FOR_spr_bit_clr:
-			if (Op[0] && (GET_CODE(Op[0]) == CONST_INT)) {
-				unsigned int Reg = UINTVAL(Op[0]);
-				if (Reg <= 4091) return 1;
-			}
-			Diag = "__builtin_pulp_spr_bit_clr(Spr, Value) expects Spr to be immediate and in [0..4091]";
-			break;
-
-		/* Internal error no handler for this builtin code */
-		default:
-			gcc_unreachable ();
-			return 0;
-
-
-	}
-	/* Wrong arguments passed to builtin */
-	if (Diag) error("Builtin %s", Diag); else error("Builtin No Diagnosis");
-	return 0;
-}
-
-
-
-
-
+static int CheckBuiltin(int Code, int BuiltinIndex, struct ExtraBuiltinImmArg *ExtraImmArg, int Narg, ...);
 
 /* Construct a riscv_builtin_description from the given arguments.
 
@@ -4856,15 +4698,15 @@ static int CheckBuiltin(int Code, int Narg, ...)
    riscv_builtin_avail_.  */
 #define RISCV_BUILTIN(INSN, NAME, BUILTIN_TYPE, FUNCTION_TYPE, AVAIL, CHECK)	\
   { CODE_FOR_ ## INSN, "__builtin_riscv_" NAME,				\
-    BUILTIN_TYPE, FUNCTION_TYPE, riscv_builtin_avail_ ## AVAIL , CHECK }
+    BUILTIN_TYPE, FUNCTION_TYPE, riscv_builtin_avail_ ## AVAIL , CHECK },
 
 #define RISCV_BUILTIN1(INSN, NAME, BUILTIN_TYPE, FUNCTION_TYPE, AVAIL, CHECK)	\
   { CODE_FOR_ ## INSN, "__builtin_pulp_" NAME,				\
-    BUILTIN_TYPE, FUNCTION_TYPE, riscv_builtin_avail_ ## AVAIL , CHECK }
+    BUILTIN_TYPE, FUNCTION_TYPE, riscv_builtin_avail_ ## AVAIL , CHECK },
 
 #define RISCV_BUILTIN2(INSN, NAME, BUILTIN_TYPE, FUNCTION_TYPE, AVAIL, CHECK)	\
   { CODE_FOR_ ## INSN, "__builtin_" NAME,				\
-    BUILTIN_TYPE, FUNCTION_TYPE, riscv_builtin_avail_ ## AVAIL , CHECK }
+    BUILTIN_TYPE, FUNCTION_TYPE, riscv_builtin_avail_ ## AVAIL , CHECK },
 
 /* Define __builtin_riscv_<INSN>, which is a RISCV_BUILTIN_DIRECT function
    mapped to instruction CODE_FOR_<INSN>,  FUNCTION_TYPE and AVAIL
@@ -4887,6 +4729,8 @@ static int CheckBuiltin(int Code, int Narg, ...)
   RISCV_BUILTIN1 (INSN, #NAME, RISCV_BUILTIN_DIRECT_NO_TARGET, FUNCTION_TYPE, AVAIL, CHECK)
 
 static const struct riscv_builtin_description riscv_builtins[] = {
+#include "pulp_builtins.def"
+#ifdef NOTINCBTINDEF
   DIRECT_NO_TARGET_BUILTIN (nop, RISCV_VOID_FTYPE_VOID, riscv, NULL),
 
   DIRECT_BUILTIN1(fl1si2,           	fl1,        	RISCV_INT_FTYPE_INT,             		pulp_vall, NULL),
@@ -5044,8 +4888,223 @@ static const struct riscv_builtin_description riscv_builtins[] = {
   DIRECT_NO_TARGET_BUILTIN1(pulp_omp_barrier, 		pulp_GOMP_barrier,		RISCV_VOID_FTYPE_VOID,	pulp_v2, NULL),
   DIRECT_NO_TARGET_BUILTIN1(pulp_omp_critical_start, 	pulp_GOMP_critical_start,	RISCV_VOID_FTYPE_VOID,	pulp_v2, NULL),
   DIRECT_NO_TARGET_BUILTIN1(pulp_omp_critical_end, 	pulp_GOMP_critical_end,		RISCV_VOID_FTYPE_VOID,	pulp_v2, NULL),
-
+#endif
 };
+
+#undef DIRECT_NO_TARGET_BUILTIN1
+#define DIRECT_NO_TARGET_BUILTIN1(INSN, NAME, FUNCTION_TYPE, AVAIL, CHECK) PULP_BUILTIN_ ## NAME,
+#undef DIRECT_NO_TARGET_BUILTIN
+#define DIRECT_NO_TARGET_BUILTIN(INSN, FUNCTION_TYPE, AVAIL, CHECK) PULP_BUILTIN_ ## NAME,
+#undef DIRECT_BUILTIN1
+#define DIRECT_BUILTIN1(INSN, NAME, FUNCTION_TYPE, AVAIL, CHECK) PULP_BUILTIN_ ## NAME,
+enum Pulp_Builtin_Id {
+#include "pulp_builtins.def"
+};
+
+static int CheckBuiltin(int Code, int BuiltinIndex, struct ExtraBuiltinImmArg *ExtraImmArg, int Narg, ...)
+
+{
+	int i;
+	rtx Op[6] = {NULL, NULL, NULL, NULL, NULL, NULL};
+	const char *Diag=NULL;
+	va_list ap;
+
+	va_start(ap, Narg);
+	for (i=0; i<Narg; i++) Op[i] = va_arg(ap, rtx);
+	va_end(ap);
+
+	if (ExtraImmArg) {
+		ExtraImmArg->Count = 0;
+		ExtraImmArg->PostExtract.Yes = 0;
+	}
+
+	switch ((enum Pulp_Builtin_Id) BuiltinIndex) {
+		case PULP_BUILTIN_CoreCount:
+			ExtraImmArg->Count = 2;
+			ExtraImmArg->Pos[0] = 1; ExtraImmArg->Pos[1] = 2;
+			ExtraImmArg->IsReg[0] = 1; ExtraImmArg->IsReg[1] = 0;
+			// Gap8: (APB_SOC_CTRL_ADDR + 0x12) = SOC_PERIPHERALS_BASE_ADDR + 0x0300 + 0x12
+			// 0x1A100000 + 0x3000 + 0x12
+			ExtraImmArg->Value[0] = 0x1A103000;
+			ExtraImmArg->Value[1] = 0x12;
+			break;
+		case PULP_BUILTIN_CoreId:
+			ExtraImmArg->Count = 1;
+			ExtraImmArg->IsReg[0] = 0;
+			ExtraImmArg->Value[0] = 0xF10;
+			ExtraImmArg->PostExtract.Yes = 1; ExtraImmArg->PostExtract.Size = 5;
+			ExtraImmArg->PostExtract.Off = 0; ExtraImmArg->PostExtract.Sign = 0;
+			Op[0] = gen_rtx_CONST_INT(SImode, ExtraImmArg->Value[0]);
+			break;
+		case PULP_BUILTIN_ClusterId:
+			ExtraImmArg->Count = 1;
+			ExtraImmArg->IsReg[0] = 0;
+			ExtraImmArg->Value[0] = 0xF10;
+			ExtraImmArg->PostExtract.Yes = 1; ExtraImmArg->PostExtract.Size = 6;
+			ExtraImmArg->PostExtract.Off = 5; ExtraImmArg->PostExtract.Sign = 0;
+			Op[0] = gen_rtx_CONST_INT(SImode, ExtraImmArg->Value[0]);
+			break;
+		default:
+			break;
+	}
+
+	switch (Code) {
+		/* Op3 const and in 0..31, Op4 const and == 2^(Op3 - 1) */
+		case CODE_FOR_macsRNr_si3:
+		case CODE_FOR_macuRNr_si3:
+		case CODE_FOR_machhsRNr_si3:
+		case CODE_FOR_machhuRNr_si3:
+			if (Op[3] && (GET_CODE(Op[3]) == CONST_INT) && Op[4] && (GET_CODE(Op[4]) == CONST_INT)) {
+				int Norm = INTVAL (Op[3]);
+				int Round = INTVAL (Op[4]);
+				if (Norm >= 0 && Norm <= 31) {
+					if ((1 << (Norm - 1)) == Round) return 1;
+				}
+			}
+			Diag = "__builtin_pulp_mac{hh,}{s,u}NRr (X, Y, Acc, Norm, Round) expects Norm and Round cst, Norm<=31, Round==2^(Norm-1)";
+			break;
+		/* Op2 const and in 0..31, Op3 const and == 2^(Op2 - 1) */
+		case CODE_FOR_mulsRNr_si3:
+		case CODE_FOR_muluRNr_si3:
+		case CODE_FOR_mulhhsRNr_si3:
+		case CODE_FOR_mulhhuRNr_si3:
+			Diag = "__builtin_pulp_mul{hh,}{s,u}NRr (X, Y, Norm, Round) expects Norm and Round cst, Norm<=31, Round==2^(Norm-1)";
+		case CODE_FOR_addRN_si3:
+		case CODE_FOR_addRNu_si3:
+		case CODE_FOR_subRN_si3:
+		case CODE_FOR_subRNu_si3:
+			if (Op[2] && (GET_CODE(Op[2]) == CONST_INT) && Op[3] && (GET_CODE(Op[3]) == CONST_INT)) {
+				int Norm = INTVAL (Op[2]);
+				int Round = INTVAL (Op[3]);
+				if (Norm >= 0 && Norm <= 31) {
+					if ((1 << (Norm - 1)) == Round) return 1;
+				}
+			}
+			if (Diag == NULL)
+				Diag = "__builtin_pulp_{add,addu,sub}{hh,}NRr (X, Y, Norm, Round) expects Norm and Round cst, Norm<=31, Round==2^(Norm-1)";
+			break;
+		/* Op3 const and in 0..31 */
+		case CODE_FOR_macsNr_si3:
+		case CODE_FOR_macuNr_si3:
+		case CODE_FOR_machhsNr_si3:
+		case CODE_FOR_machhuNr_si3:
+			if (Op[3] && (GET_CODE(Op[3]) == CONST_INT)) {
+				int Norm = INTVAL (Op[3]);
+				if (Norm >= 0 && Norm <= 31) return 1;
+			}
+			Diag = "__builtin_pulp_mac{hh,}{s,u}NRr (X, Y, Acc, Norm, Round) expects Norm and Round cst, Norm<=31, Round==2^(Norm-1)";
+			break;
+		/* Op2 const and in 0..31 */
+		case CODE_FOR_mulsNr_si3:
+		case CODE_FOR_muluNr_si3:
+		case CODE_FOR_mulhhsNr_si3:
+		case CODE_FOR_mulhhuNr_si3:
+			Diag = "__builtin_pulp_mul{hh,}{s,u}Nr (X, Y, Norm) expects Norm cst, Norm<=31";
+		case CODE_FOR_addN_si3:
+		case CODE_FOR_addNu_si3:
+		case CODE_FOR_subN_si3:
+		case CODE_FOR_subNu_si3:
+			if (Op[2] && (GET_CODE(Op[2]) == CONST_INT)) {
+				int Norm = INTVAL (Op[2]);
+				if (Norm >= 0 && Norm <= 31) return 1;
+			}
+			if (Diag==NULL) Diag = "__builtin_pulp_{add,addu,sub}Nr (X, Y, Norm) expects Norm cst, Norm<=31";
+			break;
+		/* Op1 const, Op2 const, Op1==-2^(N-1), Op2==2^(N-1)-1 */
+		case CODE_FOR_clip_minmax:
+			if (Op[1] && (GET_CODE(Op[1]) == CONST_INT) && Op[2] && (GET_CODE(Op[2]) == CONST_INT)) {
+				int i;
+				int Min = INTVAL (Op[1]);
+				int Max = INTVAL (Op[2]);
+				for (i = 0; i < 30; i ++) if ((Max == (1 << i) - 1) && (Min == - (1 << i))) return 1;
+			}
+			Diag = "__builtin_pulp_clip (X, Min, Max) expects Min and Max cst, Min=-2^(N-1), Max=2^(N-1)-1";
+			break;
+		/* Op1 const, Op2 const, Op1==0, Op2==2^(N-1)-1 */
+		case CODE_FOR_clipu_minmax:
+			if (Op[1] && (GET_CODE(Op[1]) == CONST_INT) && Op[2] && (GET_CODE(Op[2]) == CONST_INT)) {
+				int i;
+				int Min = INTVAL (Op[1]);
+				int Max = INTVAL (Op[2]);
+				if (Min==0) for (i = 0; i < 30; i ++) if ((Max == (1 << i) - 1)) return 1;
+			}
+			Diag = "__builtin_pulp_clipu (X, Min, Max) expects Min and Max cst, Min=0, Max=2^(N-1)-1";
+			break;
+		/* Op1 const > 0, Op2 const >= 0, (Op1+Op2)<32 */
+		case CODE_FOR_extvsi:
+		case CODE_FOR_extzvsi:
+			if (Op[1] && (GET_CODE(Op[1]) == CONST_INT) && Op[2] && (GET_CODE(Op[2]) == CONST_INT)) {
+				int Size   = INTVAL (Op[1]);
+				int Offset = INTVAL (Op[2]);
+				if (Size > 0 && Offset >=0 && ((Size+Offset)<=32)) return 1;
+			}
+			Diag = "__builtin_pulp_bextract(X, Size, Offset) Expects Size and Offset immediate constants, Size>0, Offset>=0, (Size+Offset)<=32";
+			break;
+		/* Op0 const > 0, Op1 const >= 0, (Op0+Op1)<32 */
+		/* Op0 -> Target
+		   Op1 -> ~Mask
+		   Op2 -> InsVal
+		   Op3 -> Mask
+		   Op4 -> Off
+		*/
+		case CODE_FOR_invsipat1:
+			if (Op[1] && (GET_CODE(Op[1]) == CONST_INT) && Op[3] && (GET_CODE(Op[3]) == CONST_INT) &&
+			    Op[4] && (GET_CODE(Op[4]) == CONST_INT)) {
+				unsigned int Mask   = UINTVAL (Op[3]);
+				unsigned int MaskBar= UINTVAL (Op[1]);
+				unsigned int Size=0;
+				unsigned int Offset = UINTVAL (Op[4]);
+				int i;
+				for (i=Offset; i<32; i++, Size++) if (((1<<i) & Mask) == 0) break;
+				if ((MaskBar == ~Mask) && (Offset <= 31) &&
+				    ((unsigned int) (((1<<Size) - 1) << Offset) == Mask)) return 1;
+			}
+			Diag = "__builtin_pulp_binsert (Target, MaskBar, InsVal, Size, Mask, Off) expects Off,Mask,MaskBar cst, Size>0, Off>=0, (Off+Size)<=32";
+			break;
+		case CODE_FOR_load_evt_unit:
+			if (Op[1] && (GET_CODE(Op[1]) == CONST_INT)) return 1;
+			Diag = "__builtin_event_unit_read(base, offset), offset expected to be immediate value";
+			break;
+		case CODE_FOR_read_spr:
+			if (Op[0] && (GET_CODE(Op[0]) == CONST_INT)) {
+				unsigned int Reg = UINTVAL(Op[0]);
+				if (Reg <= 4091) return 1;
+			}
+			Diag = "__builtin_pulp_spr_read(Spr) expects Spr to be immediate and in [0..4091]";
+			break;
+		case CODE_FOR_write_spr:
+			if (Op[0] && (GET_CODE(Op[0]) == CONST_INT)) {
+				unsigned int Reg = UINTVAL(Op[0]);
+				if (Reg <= 4091) return 1;
+			}
+			Diag = "__builtin_pulp_spr_write(Spr, Value) expects Spr to be immediate and in [0..4091]";
+			break;
+		case CODE_FOR_spr_bit_set:
+			if (Op[0] && (GET_CODE(Op[0]) == CONST_INT)) {
+				unsigned int Reg = UINTVAL(Op[0]);
+				if (Reg <= 4091) return 1;
+			}
+			Diag = "__builtin_pulp_spr_bit_set(Spr, Value) expects Spr to be immediate and in [0..4091]";
+			break;
+		case CODE_FOR_spr_bit_clr:
+			if (Op[0] && (GET_CODE(Op[0]) == CONST_INT)) {
+				unsigned int Reg = UINTVAL(Op[0]);
+				if (Reg <= 4091) return 1;
+			}
+			Diag = "__builtin_pulp_spr_bit_clr(Spr, Value) expects Spr to be immediate and in [0..4091]";
+			break;
+
+		/* Internal error no handler for this builtin code */
+		default:
+			// gcc_unreachable ();
+			return 1;
+
+
+	}
+	/* Wrong arguments passed to builtin */
+	if (Diag) error("Builtin %s", Diag); else error("Builtin No Diagnosis");
+	return 0;
+}
 
 /* Index I is the function declaration for riscv_builtins[I], or null if the
    function isn't defined on this target.  */
@@ -5193,7 +5252,7 @@ riscv_init_builtins (void)
 				Remapped_GOMP_Builtins[Head_Remapped_GOMP_Builtins].Pulp = i;
 				Head_Remapped_GOMP_Builtins++;
 				break;
-			case CODE_FOR_OffsetedRead:
+			case CODE_FOR_OffsetedReadOMP:
 				Native_GOMP_Builtins[NATIVE_GOMP_LOOP_CHUNK_SIZE].TypeDescr = riscv_builtin_decls[i];
 				Native_GOMP_Builtins[NATIVE_GOMP_LOOP_START].TypeDescr = riscv_builtin_decls[i];
 				break;
@@ -5204,6 +5263,27 @@ riscv_init_builtins (void)
     }
 }
 
+
+/* Implement `TARGET_FOLD_BUILTIN'.  */
+
+static tree
+riscv_fold_builtin (tree fndecl, int n_args ATTRIBUTE_UNUSED, tree *arg,
+                    bool ignore ATTRIBUTE_UNUSED)
+{
+	unsigned int fcode = DECL_FUNCTION_CODE (fndecl);
+	tree val_type = TREE_TYPE (TREE_TYPE (fndecl));
+
+	switch (fcode) {
+		case PULP_BUILTIN_CoreCount:
+			if (_Pulp_PE>0) {
+				 return build_int_cst (integer_type_node, _Pulp_PE);
+			} else return NULL_TREE;
+			break;
+		default:
+			return NULL_TREE;
+	}
+
+}
 
 /* Implement TARGET_BUILTIN_DECL.  */
 
@@ -5270,19 +5350,34 @@ riscv_prepare_builtin_target (enum insn_code icode, unsigned int op, rtx target)
   return target;
 }
 
+static void PulpBuiltinGenPostExtract(struct ExtraBuiltinImmArg *ExtraArg, rtx OutReg)
+
+{
+	if (!ExtraArg->PostExtract.Yes) return;
+
+	if (ExtraArg->PostExtract.Sign)
+		emit_insn(gen_extvsi(OutReg, OutReg, gen_rtx_CONST_INT(SImode, ExtraArg->PostExtract.Size),
+						     gen_rtx_CONST_INT(SImode, ExtraArg->PostExtract.Off)));
+	else
+		emit_insn(gen_extzvsi(OutReg, OutReg, gen_rtx_CONST_INT(SImode, ExtraArg->PostExtract.Size),
+						      gen_rtx_CONST_INT(SImode, ExtraArg->PostExtract.Off)));
+}
+
 /* Expand a RISCV_BUILTIN_DIRECT or RISCV_BUILTIN_DIRECT_NO_TARGET function;
    HAS_TARGET_P says which.  EXP is the CALL_EXPR that calls the function
    and ICODE is the code of the associated .md pattern.  TARGET, if nonnull,
    suggests a good place to put the result.  */
 
 static rtx
-riscv_expand_builtin_direct (const struct riscv_builtin_description *d, enum insn_code icode, rtx target, tree exp,
+riscv_expand_builtin_direct (const struct riscv_builtin_description *d, int builtin_index, enum insn_code icode, rtx target, tree exp,
 			    bool has_target_p)
 {
   rtx ops[MAX_RECOG_OPERANDS];
   int opno, argno;
+  struct ExtraBuiltinImmArg ExtraArg;
 
   /* Map any target to operand 0.  */
+  ExtraArg.Count = 0; ExtraArg.PostExtract.Yes = 0;
   opno = 0;
   if (has_target_p)
     {
@@ -5300,9 +5395,41 @@ riscv_expand_builtin_direct (const struct riscv_builtin_description *d, enum ins
   for (argno = 0; argno < call_expr_nargs (exp); argno++, opno++)
     ops[opno] = riscv_prepare_builtin_arg (icode, opno, exp, argno);
   if (has_target_p) {
-  	if (d->check) d->check(icode, call_expr_nargs (exp), ops[1], ops[2], ops[3], ops[4], ops[5]);
+  	if (d->check) {
+		d->check(icode, builtin_index, &ExtraArg, call_expr_nargs (exp), ops[1], ops[2], ops[3], ops[4], ops[5]);
+		if (ExtraArg.Count) {
+			int i;
+			for (i=0; i<ExtraArg.Count; i++) {
+				if (ExtraArg.IsReg[i]) {
+					rtx Reg = gen_reg_rtx (SImode);
+				
+					emit_insn(gen_movsi(Reg, gen_rtx_CONST_INT(SImode, ExtraArg.Value[i])));
+					ops[opno] = Reg;
+				} else {
+					ops[opno] = gen_rtx_CONST_INT(SImode, ExtraArg.Value[i]);
+				}
+				opno++; argno++;
+			}
+		}
+	}
   } else {
-  	if (d->check) d->check(icode, call_expr_nargs (exp), ops[0], ops[1], ops[2], ops[3]);
+  	if (d->check) {
+		d->check(icode, builtin_index, &ExtraArg, call_expr_nargs (exp), ops[0], ops[1], ops[2], ops[3]);
+		if (ExtraArg.Count) {
+			int i;
+			for (i=0; i<ExtraArg.Count; i++) {
+				if (ExtraArg.IsReg[i]) {
+					rtx Reg = gen_reg_rtx (SImode);
+				
+					emit_insn(gen_movsi(Reg, gen_rtx_CONST_INT(SImode, ExtraArg.Value[i])));
+					ops[opno] = Reg;
+				} else {
+					ops[opno] = gen_rtx_CONST_INT(SImode, ExtraArg.Value[i]);
+				}
+				opno++; argno++;
+			}
+		}
+	}
   }
 
   switch (opno)
@@ -5336,6 +5463,7 @@ riscv_expand_builtin_direct (const struct riscv_builtin_description *d, enum ins
     default:
       gcc_unreachable ();
     }
+  PulpBuiltinGenPostExtract(&ExtraArg, ops[0]);
   return target;
 }
 
@@ -5397,10 +5525,10 @@ riscv_expand_builtin (tree exp, rtx target, rtx subtarget ATTRIBUTE_UNUSED,
   switch (d->builtin_type)
     {
     case RISCV_BUILTIN_DIRECT:
-      return riscv_expand_builtin_direct (d, d->icode, target, exp, true);
+      return riscv_expand_builtin_direct (d, fcode, d->icode, target, exp, true);
 
     case RISCV_BUILTIN_DIRECT_NO_TARGET:
-      return riscv_expand_builtin_direct (d, d->icode, target, exp, false);
+      return riscv_expand_builtin_direct (d, fcode, d->icode, target, exp, false);
     }
   gcc_unreachable ();
 }
@@ -6466,6 +6594,9 @@ riscv_reorg (void)
 #define TARGET_BUILTIN_DECL riscv_builtin_decl
 #undef TARGET_EXPAND_BUILTIN
 #define TARGET_EXPAND_BUILTIN riscv_expand_builtin
+
+#undef  TARGET_FOLD_BUILTIN
+#define TARGET_FOLD_BUILTIN riscv_fold_builtin
 
 #undef TARGET_REMAPPED_BUILTIN
 #define TARGET_REMAPPED_BUILTIN riscv_remapped_builtin
