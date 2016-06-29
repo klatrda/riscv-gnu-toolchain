@@ -4730,165 +4730,6 @@ static int CheckBuiltin(int Code, int BuiltinIndex, struct ExtraBuiltinImmArg *E
 
 static const struct riscv_builtin_description riscv_builtins[] = {
 #include "pulp_builtins.def"
-#ifdef NOTINCBTINDEF
-  DIRECT_NO_TARGET_BUILTIN (nop, RISCV_VOID_FTYPE_VOID, riscv, NULL),
-
-  DIRECT_BUILTIN1(fl1si2,           	fl1,        	RISCV_INT_FTYPE_INT,             		pulp_vall, NULL),
-  DIRECT_BUILTIN1(ffsi2,            	ff1,        	RISCV_INT_FTYPE_INT,             		pulp_vall, NULL),
-
-  DIRECT_BUILTIN1(maddsisi4,        	mac,        	RISCV_INT_FTYPE_INT_INT_INT,     		pulp_vall, NULL),
-  DIRECT_BUILTIN1(macs_si4,         	macs,       	RISCV_INT_FTYPE_SHORT_SHORT_INT, 		pulp_vall, NULL),
-  DIRECT_BUILTIN1(macu_si4,         	macu,       	RISCV_INT_FTYPE_SHORT_SHORT_INT, 		pulp_vall, NULL),
-
-  DIRECT_BUILTIN1(machlsu_si4,      	machlsu,    	RISCV_INT_FTYPE_INT_SHORT_INT,   		pulp_v0_only, NULL),
-  DIRECT_BUILTIN1(machlu_si4,       	machlu,     	RISCV_INT_FTYPE_INT_SHORT_INT,   		pulp_v0_only, NULL),
-
-  DIRECT_BUILTIN1(machhs_si4,       	machhs,     	RISCV_INT_FTYPE_INT_INT_INT,     		pulp_vall, NULL),
-  DIRECT_BUILTIN1(machhu_si4,       	machhu,     	RISCV_INT_FTYPE_INT_INT_INT,     		pulp_vall, NULL),
-
-  DIRECT_BUILTIN1(machls_si4,       	machls,     	RISCV_INT_FTYPE_INT_SHORT_INT,   		pulp_v0_only, NULL),
-
-  DIRECT_BUILTIN1(rotrsi3,          	rotr,       	RISCV_INT_FTYPE_INT_INT,         		pulp_vall, NULL),
-
-  DIRECT_BUILTIN1(addv2hi3,         	add2,       	RISCV_V2HI_FTYPE_V2HI_V2HI,      		pulp_v2, NULL),
-  DIRECT_BUILTIN1(addv4qi3,         	add4,       	RISCV_V4QI_FTYPE_V4QI_V4QI,      		pulp_v2, NULL),
-
-  DIRECT_BUILTIN1(subv2hi3,         	sub2,       	RISCV_V2HI_FTYPE_V2HI_V2HI,      		pulp_v2, NULL),
-  DIRECT_BUILTIN1(subv4qi3,         	sub4,       	RISCV_V4QI_FTYPE_V4QI_V4QI,      		pulp_v2, NULL),
-
-  DIRECT_BUILTIN1(avgv2hi3,         	avg2,       	RISCV_V2HI_FTYPE_V2HI_V2HI,      		pulp_v2, NULL),
-  DIRECT_BUILTIN1(avgv4qi3,         	avg4,       	RISCV_V4QI_FTYPE_V4QI_V4QI,      		pulp_v2, NULL),
-
-  DIRECT_BUILTIN1(avgv2uhi3,        	avgu2,      	RISCV_V2HI_FTYPE_V2HI_V2HI,      		pulp_v2, NULL),
-  DIRECT_BUILTIN1(avgv4uqi3,        	avgu4,      	RISCV_V4QI_FTYPE_V4QI_V4QI,      		pulp_v2, NULL),
-
-  DIRECT_BUILTIN1(sminv2hi3,        	min2,       	RISCV_V2HI_FTYPE_V2HI_V2HI,      		pulp_v2, NULL),
-  DIRECT_BUILTIN1(sminv4qi3,        	min4,       	RISCV_V4QI_FTYPE_V4QI_V4QI,      		pulp_v2, NULL),
-
-  DIRECT_BUILTIN1(uminv2hi3,        	minu2,      	RISCV_V2HI_FTYPE_V2HI_V2HI,      		pulp_v2, NULL),
-  DIRECT_BUILTIN1(uminv4qi3,        	minu4,      	RISCV_V4QI_FTYPE_V4QI_V4QI,      		pulp_v2, NULL),
-
-  DIRECT_BUILTIN1(smaxv2hi3,        	max2,       	RISCV_V2HI_FTYPE_V2HI_V2HI,      		pulp_v2, NULL),
-  DIRECT_BUILTIN1(smaxv4qi3,        	max4,       	RISCV_V4QI_FTYPE_V4QI_V4QI,      		pulp_v2, NULL),
-
-  DIRECT_BUILTIN1(umaxv2hi3,        	maxu2,      	RISCV_V2HI_FTYPE_V2HI_V2HI,      		pulp_v2, NULL),
-  DIRECT_BUILTIN1(umaxv4qi3,        	maxu4,      	RISCV_V4QI_FTYPE_V4QI_V4QI,      		pulp_v2, NULL),
-
-  DIRECT_BUILTIN1(andv2hi3,         	and2,       	RISCV_V2HI_FTYPE_V2HI_V2HI,      		pulp_v2, NULL),
-  DIRECT_BUILTIN1(andv4qi3,         	and4,       	RISCV_V4QI_FTYPE_V4QI_V4QI,      		pulp_v2, NULL),
-
-  DIRECT_BUILTIN1(iorv2hi3,         	or2,        	RISCV_V2HI_FTYPE_V2HI_V2HI,      		pulp_v2, NULL),
-  DIRECT_BUILTIN1(iorv4qi3,         	or4,        	RISCV_V4QI_FTYPE_V4QI_V4QI,      		pulp_v2, NULL),
-
-  DIRECT_BUILTIN1(exorv2hi3,        	exor2,      	RISCV_V2HI_FTYPE_V2HI_V2HI,      		pulp_v2, NULL),
-  DIRECT_BUILTIN1(exorv4qi3,        	exor4,      	RISCV_V4QI_FTYPE_V4QI_V4QI,      		pulp_v2, NULL),
-
-  DIRECT_BUILTIN1(vlshrv2hi3,       	srl2,       	RISCV_V2HI_FTYPE_V2HI_V2HI,      		pulp_v2, NULL),
-  DIRECT_BUILTIN1(vlshrv4qi3,       	srl4,       	RISCV_V4QI_FTYPE_V4QI_V4QI,      		pulp_v2, NULL),
-
-  DIRECT_BUILTIN1(vashrv2hi3,       	sra2,       	RISCV_V2HI_FTYPE_V2HI_V2HI,      		pulp_v2, NULL),
-  DIRECT_BUILTIN1(vashrv4qi3,       	sra4,       	RISCV_V4QI_FTYPE_V4QI_V4QI,      		pulp_v2, NULL),
- 
-  DIRECT_BUILTIN1(vashlv2hi3,       	sll2,       	RISCV_V2HI_FTYPE_V2HI_V2HI,      		pulp_v2, NULL),
-  DIRECT_BUILTIN1(vashlv4qi3,       	sll4,       	RISCV_V4QI_FTYPE_V4QI_V4QI,      		pulp_v2, NULL),
-
-  DIRECT_BUILTIN1(absv2hi2,       	abs2,       	RISCV_V2HI_FTYPE_V2HI,      			pulp_v2, NULL),
-  DIRECT_BUILTIN1(absv4qi2,       	abs4,       	RISCV_V4QI_FTYPE_V4QI,      			pulp_v2, NULL),
-
-  DIRECT_BUILTIN1(negv2hi2,       	neg2,       	RISCV_V2HI_FTYPE_V2HI,      			pulp_v2, NULL),
-  DIRECT_BUILTIN1(negv4qi2,       	neg4,       	RISCV_V4QI_FTYPE_V4QI,      			pulp_v2, NULL),
-
-  DIRECT_BUILTIN1(dotpv2hi,         	dotsp2,     	RISCV_INT_FTYPE_V2HI_V2HI,       		pulp_v2, NULL),
-  DIRECT_BUILTIN1(dotspscv2hi_le,   	dotspsc2,   	RISCV_INT_FTYPE_V2HI_INT,        		pulp_v2, NULL),
-  DIRECT_BUILTIN1(dotpv4qi,         	dotsp4,     	RISCV_INT_FTYPE_V4QI_V4QI,       		pulp_v2, NULL),
-  DIRECT_BUILTIN1(dotspscv4qi_le,   	dotspsc4,   	RISCV_INT_FTYPE_V4QI_INT,        		pulp_v2, NULL),
-
-  DIRECT_BUILTIN1(dotupv2hi,        	dotup2,     	RISCV_INT_FTYPE_V2HI_V2HI,       		pulp_v2, NULL),
-  DIRECT_BUILTIN1(dotupscv2hi_le,   	dotupsc2,   	RISCV_INT_FTYPE_V2HI_INT,        		pulp_v2, NULL),
-  DIRECT_BUILTIN1(dotupv4qi,        	dotup4,     	RISCV_INT_FTYPE_V4QI_V4QI,       		pulp_v2, NULL),
-  DIRECT_BUILTIN1(dotupscv4qi_le,   	dotupsc4,   	RISCV_INT_FTYPE_V4QI_INT,        		pulp_v2, NULL),
-
-  DIRECT_BUILTIN1(dotuspv2hi,       	dotusp2,    	RISCV_INT_FTYPE_V2HI_V2HI,       		pulp_v2, NULL),
-  DIRECT_BUILTIN1(dotuspscv2hi_le,  	dotuspsc2,  	RISCV_INT_FTYPE_V2HI_INT,        		pulp_v2, NULL),
-  DIRECT_BUILTIN1(dotuspv4qi,       	dotusp4,    	RISCV_INT_FTYPE_V4QI_V4QI,       		pulp_v2, NULL),
-  DIRECT_BUILTIN1(dotuspscv4qi_le,  	dotuspsc4,  	RISCV_INT_FTYPE_V4QI_INT,        		pulp_v2, NULL),
-
-  DIRECT_BUILTIN1(sdot_prodv2hi,    	sdotsp2,     	RISCV_INT_FTYPE_V2HI_V2HI_INT,   		pulp_v2, NULL),
-  DIRECT_BUILTIN1(sdotspscv2hi_le,  	sdotspsc2,   	RISCV_INT_FTYPE_V2HI_INT_INT,    		pulp_v2, NULL),
-  DIRECT_BUILTIN1(sdot_prodv4qi,    	sdotsp4,     	RISCV_INT_FTYPE_V4QI_V4QI_INT,   		pulp_v2, NULL),
-  DIRECT_BUILTIN1(sdotspscv4qi_le,  	sdotspsc4,   	RISCV_INT_FTYPE_V4QI_INT_INT,    		pulp_v2, NULL),
-
-  DIRECT_BUILTIN1(udot_prodv2hi,    	sdotup2,    	RISCV_INT_FTYPE_V2HI_V2HI_INT,   		pulp_v2, NULL),
-  DIRECT_BUILTIN1(sdotupscv2hi_le,  	sdotupsc2,  	RISCV_INT_FTYPE_V2HI_INT_INT,    		pulp_v2, NULL),
-  DIRECT_BUILTIN1(udot_prodv4qi,    	sdotup4,    	RISCV_INT_FTYPE_V4QI_V4QI_INT,   		pulp_v2, NULL),
-  DIRECT_BUILTIN1(sdotupscv4qi_le,  	sdotupsc4,  	RISCV_INT_FTYPE_V4QI_INT_INT,    		pulp_v2, NULL),
-
-  DIRECT_BUILTIN1(sdotuspv2hi,      	sdotusp2,   	RISCV_INT_FTYPE_V2HI_V2HI_INT,   		pulp_v2, NULL),
-  DIRECT_BUILTIN1(sdotuspscv2hi_le, 	sdotuspsc2, 	RISCV_INT_FTYPE_V2HI_INT_INT,    		pulp_v2, NULL),
-  DIRECT_BUILTIN1(sdotuspv4qi,      	sdotusp4,   	RISCV_INT_FTYPE_V4QI_V4QI_INT,   		pulp_v2, NULL),
-  DIRECT_BUILTIN1(sdotuspscv4qi_le, 	sdotuspsc4, 	RISCV_INT_FTYPE_V4QI_INT_INT,    		pulp_v2, NULL),
-
-  DIRECT_BUILTIN1(mulhisi3,         	muls,       	RISCV_INT_FTYPE_SHORT_SHORT,     		pulp_v2, NULL),
-  DIRECT_BUILTIN1(umulhisi3,        	mulu,       	RISCV_INT_FTYPE_SHORT_SHORT,     		pulp_v2, NULL),
-  DIRECT_BUILTIN1(mulhhs_si3,       	mulhhs,     	RISCV_INT_FTYPE_INT_INT,         		pulp_v2, NULL),
-  DIRECT_BUILTIN1(mulhhu_si3,       	mulhhu,     	RISCV_INT_FTYPE_INT_INT,         		pulp_v2, NULL),
-
-  DIRECT_BUILTIN1(mulsNr_si3, 		mulsN,		RISCV_INT_FTYPE_SHORT_SHORT_INT,		pulp_v2, CheckBuiltin),
-  DIRECT_BUILTIN1(mulsRNr_si3, 		mulsRN,		RISCV_INT_FTYPE_SHORT_SHORT_INT_INT,		pulp_v2, CheckBuiltin),
-  DIRECT_BUILTIN1(muluNr_si3, 		muluN,		RISCV_INT_FTYPE_SHORT_SHORT_INT,		pulp_v2, CheckBuiltin),
-  DIRECT_BUILTIN1(muluRNr_si3, 		muluRN,		RISCV_INT_FTYPE_SHORT_SHORT_INT_INT,		pulp_v2, CheckBuiltin),
-  DIRECT_BUILTIN1(mulhhsNr_si3,		mulhhsN,	RISCV_INT_FTYPE_SHORT_SHORT_INT,		pulp_v2, CheckBuiltin),
-  DIRECT_BUILTIN1(mulhhsRNr_si3,	mulhhsRN,	RISCV_INT_FTYPE_SHORT_SHORT_INT_INT,		pulp_v2, CheckBuiltin),
-  DIRECT_BUILTIN1(mulhhuNr_si3,		mulhhuN,	RISCV_INT_FTYPE_SHORT_SHORT_INT,		pulp_v2, CheckBuiltin),
-  DIRECT_BUILTIN1(mulhhuRNr_si3,	mulhhuRN,	RISCV_INT_FTYPE_SHORT_SHORT_INT_INT,		pulp_v2, CheckBuiltin),
-
-  DIRECT_BUILTIN1(macsNr_si3,		macsN,		RISCV_INT_FTYPE_SHORT_SHORT_INT_INT,		pulp_v2, CheckBuiltin),
-  DIRECT_BUILTIN1(macuNr_si3,		macuN,		RISCV_INT_FTYPE_SHORT_SHORT_INT_INT,		pulp_v2, CheckBuiltin),
-  DIRECT_BUILTIN1(macsRNr_si3,		macsRN,		RISCV_INT_FTYPE_SHORT_SHORT_INT_INT_INT,	pulp_v2, CheckBuiltin),
-  DIRECT_BUILTIN1(macuRNr_si3,		macuRN,		RISCV_INT_FTYPE_SHORT_SHORT_INT_INT_INT,	pulp_v2, CheckBuiltin),
-  DIRECT_BUILTIN1(machhsNr_si3,		machhsN,	RISCV_INT_FTYPE_SHORT_SHORT_INT_INT,		pulp_v2, CheckBuiltin),
-  DIRECT_BUILTIN1(machhuNr_si3,		machhuN,	RISCV_INT_FTYPE_SHORT_SHORT_INT_INT,		pulp_v2, CheckBuiltin),
-  DIRECT_BUILTIN1(machhsRNr_si3,	machhsRN,	RISCV_INT_FTYPE_SHORT_SHORT_INT_INT_INT,	pulp_v2, CheckBuiltin),
-  DIRECT_BUILTIN1(machhuRNr_si3,	machhuRN,	RISCV_INT_FTYPE_SHORT_SHORT_INT_INT_INT,	pulp_v2, CheckBuiltin),
-
-  DIRECT_BUILTIN1(addN_si3,		addN,		RISCV_INT_FTYPE_INT_INT_INT,			pulp_v2, CheckBuiltin),
-  DIRECT_BUILTIN1(addNu_si3,		adduN,		RISCV_INT_FTYPE_INT_INT_INT,			pulp_v2, CheckBuiltin),
-  DIRECT_BUILTIN1(subN_si3,		subN,		RISCV_INT_FTYPE_INT_INT_INT,			pulp_v2, CheckBuiltin),
-  DIRECT_BUILTIN1(subNu_si3,		subuN,		RISCV_INT_FTYPE_INT_INT_INT,			pulp_v2, CheckBuiltin),
-
-  DIRECT_BUILTIN1(addRN_si3,		addRN,		RISCV_INT_FTYPE_INT_INT_INT_INT,		pulp_v2, CheckBuiltin),
-  DIRECT_BUILTIN1(addRNu_si3,		adduRN,		RISCV_INT_FTYPE_INT_INT_INT_INT,		pulp_v2, CheckBuiltin),
-  DIRECT_BUILTIN1(subRN_si3,		subRN,		RISCV_INT_FTYPE_INT_INT_INT_INT,		pulp_v2, CheckBuiltin),
-  DIRECT_BUILTIN1(subRNu_si3,		subuRN,		RISCV_INT_FTYPE_INT_INT_INT_INT,		pulp_v2, CheckBuiltin),
-
-  DIRECT_BUILTIN1(vec_pack_v2hi, 	pack2, 		RISCV_V2HI_FTYPE_SHORT_SHORT,			pulp_v2, NULL),
-  DIRECT_BUILTIN1(vec_pack_v4qi, 	pack4, 		RISCV_V4QI_FTYPE_CHAR_CHAR_CHAR_CHAR,		pulp_v2, NULL),
-  DIRECT_BUILTIN1(vec_permv2hi_int1, 	shuffleh, 	RISCV_V2HI_FTYPE_V2HI_V2HI,			pulp_v2, NULL),
-  DIRECT_BUILTIN1(vec_permv4qi_int1, 	shuffleb, 	RISCV_V4QI_FTYPE_V4QI_V4QI,			pulp_v2, NULL),
-  DIRECT_BUILTIN1(vec_pack_v4qi_lo,	pack4_lo,	RISCV_V4QI_FTYPE_CHAR_CHAR_V4QI,		pulp_v2, NULL),
-  DIRECT_BUILTIN1(vec_pack_v4qi_lo,	pack4_hi,	RISCV_V4QI_FTYPE_CHAR_CHAR_V4QI,		pulp_v2, NULL),
-  DIRECT_BUILTIN1(vec_permv4qi,		shuffle2b,	RISCV_V4QI_FTYPE_V4QI_V4QI_V4QI,		pulp_v2, NULL),
-  DIRECT_BUILTIN1(vec_permv2hi,		shuffle2h,	RISCV_V2HI_FTYPE_V2HI_V2HI_V2HI,		pulp_v2, NULL),
-  DIRECT_BUILTIN1(extvsi,		bextract,	RISCV_INT_FTYPE_INT_INT_INT,			pulp_v2, CheckBuiltin),
-  DIRECT_BUILTIN1(extzvsi,		bextractu,	RISCV_INT_FTYPE_INT_INT_INT,			pulp_v2, CheckBuiltin),
-  DIRECT_BUILTIN1(invsipat1,		binsert, 	RISCV_INT_FTYPE_INT_INT_INT_INT_INT,		pulp_v2, CheckBuiltin),
-  DIRECT_BUILTIN1(clip_minmax,		clip,		RISCV_INT_FTYPE_INT_INT_INT,			pulp_v2, CheckBuiltin),
-  DIRECT_BUILTIN1(clipu_minmax,		clipu,		RISCV_INT_FTYPE_INT_INT_INT,			pulp_v2, CheckBuiltin),
-
-
-  DIRECT_BUILTIN1(load_evt_unit,       	event_unit_read, RISCV_INT_FTYPE_POINTER_INT,         		pulp_v2, CheckBuiltin),
-  DIRECT_BUILTIN1(OffsetedRead,		OffsetedRead,	RISCV_INT_FTYPE_POINTER_INT,			pulp_v2, NULL),
-
-  DIRECT_BUILTIN1(read_spr,		spr_read,	RISCV_INT_FTYPE_INT,				pulp_v2, CheckBuiltin),
-
-  DIRECT_NO_TARGET_BUILTIN1(write_spr,	spr_write,	RISCV_VOID_FTYPE_INT_INT, 			pulp_v2, CheckBuiltin),
-  DIRECT_NO_TARGET_BUILTIN1(spr_bit_set,spr_bit_set,	RISCV_VOID_FTYPE_INT_INT, 			pulp_v2, CheckBuiltin),
-  DIRECT_NO_TARGET_BUILTIN1(spr_bit_clr,spr_bit_clr,	RISCV_VOID_FTYPE_INT_INT, 			pulp_v2, CheckBuiltin),
-
-  DIRECT_NO_TARGET_BUILTIN1(pulp_omp_barrier, 		pulp_GOMP_barrier,		RISCV_VOID_FTYPE_VOID,	pulp_v2, NULL),
-  DIRECT_NO_TARGET_BUILTIN1(pulp_omp_critical_start, 	pulp_GOMP_critical_start,	RISCV_VOID_FTYPE_VOID,	pulp_v2, NULL),
-  DIRECT_NO_TARGET_BUILTIN1(pulp_omp_critical_end, 	pulp_GOMP_critical_end,		RISCV_VOID_FTYPE_VOID,	pulp_v2, NULL),
-#endif
 };
 
 #undef DIRECT_NO_TARGET_BUILTIN1
@@ -4942,6 +4783,14 @@ static int CheckBuiltin(int Code, int BuiltinIndex, struct ExtraBuiltinImmArg *E
 			ExtraImmArg->Value[0] = 0xF10;
 			ExtraImmArg->PostExtract.Yes = 1; ExtraImmArg->PostExtract.Size = 6;
 			ExtraImmArg->PostExtract.Off = 5; ExtraImmArg->PostExtract.Sign = 0;
+			Op[0] = gen_rtx_CONST_INT(SImode, ExtraImmArg->Value[0]);
+			break;
+		case PULP_BUILTIN_IsFc:
+			ExtraImmArg->Count = 1;
+			ExtraImmArg->IsReg[0] = 0;
+			ExtraImmArg->Value[0] = 0xF10;
+			ExtraImmArg->PostExtract.Yes = 1; ExtraImmArg->PostExtract.Size = 1;
+			ExtraImmArg->PostExtract.Off = 10; ExtraImmArg->PostExtract.Sign = 1;
 			Op[0] = gen_rtx_CONST_INT(SImode, ExtraImmArg->Value[0]);
 			break;
 		default:
@@ -5278,6 +5127,16 @@ riscv_fold_builtin (tree fndecl, int n_args ATTRIBUTE_UNUSED, tree *arg,
 			if (_Pulp_PE>0) {
 				 return build_int_cst (integer_type_node, _Pulp_PE);
 			} else return NULL_TREE;
+			break;
+		case PULP_BUILTIN_HasFc:
+			if (_Pulp_FC) {
+				return integer_one_node; // build_int_cst (integer_type_node, 1);
+			} else {
+				return integer_zero_node; // build_int_cst (integer_type_node, 0);
+			}
+			break;
+		case PULP_BUILTIN_IsFc:
+			if (_Pulp_FC == 0) return integer_zero_node; else return NULL_TREE;
 			break;
 		default:
 			return NULL_TREE;

@@ -2738,6 +2738,35 @@ _bfd_riscv_relax_call (bfd *abfd, asection *sec, asection *sym_sec,
   return riscv_relax_delete_bytes (abfd, sec, rel->r_offset + len, 8 - len);
 }
 
+/* Clean up incorrect rvc forms */
+
+static bfd_boolean
+_bfd_riscv_relax_clean_rvc (bfd *abfd, asection *sec, asection *sym_sec,
+                            struct bfd_link_info *link_info,
+                            Elf_Internal_Rela *rel,
+                            bfd_vma symval,
+                            bfd_boolean *again)
+{
+  /* Mergeable symbols might later move out of range.  */
+  if (sym_sec->flags & SEC_MERGE) return TRUE;
+  BFD_ASSERT (rel->r_offset + 4 <= sec->size);
+  if ((ELFNN_R_TYPE (rel->r_info) == R_RISCV_RVC_LUI) && (RISCV_CONST_HIGH_PART (symval) == 0)) {
+        /* We have a RVC_LUI that was created through relaxation in a context
+           where the high part of the reloc expression was not null. Since relaxation
+           is an iterative process that shrink segments we may end up after some iterations
+           with the reloc expression now having high part null. This can happen with symbols that are functions.
+           When null simply remove it
+        */
+        // fprintf(stderr, "Clean RVC Bingo in section %s, offset=%d symval=%X\n", sec->name, (int) rel->r_offset, (int) symval);
+        rel->r_info = ELFNN_R_INFO (0, R_RISCV_NONE);
+        *again = TRUE;
+        return riscv_relax_delete_bytes (abfd, sec, rel->r_offset, 2);
+  }
+  return TRUE;
+}
+
+
+
 /* Relax non-PIC global variable references.  */
 
 static bfd_boolean
@@ -2781,6 +2810,20 @@ _bfd_riscv_relax_lui (bfd *abfd, asection *sec, asection *sym_sec,
 	  abort ();
 	}
     }
+#if 0
+  if ((ELFNN_R_TYPE (rel->r_info) == R_RISCV_RVC_LUI) && (RISCV_CONST_HIGH_PART (symval) == 0)) {
+	/* We have a RVC_LUI that was created through relaxation in a context
+	   where the high part of the reloc expression was not null. Since relaxation
+	   is an iterative process that shrink segments we may end up after some iterations
+	   with the reloc expression now having high part null. This can happen with symbols that are functions.
+	   When null simply remove it
+	*/
+	fprintf(stderr, "Bingo in section %s, offset=%d symval=%X\n", sec->name, (int) rel->r_offset, (int) symval);
+  	rel->r_info = ELFNN_R_INFO (0, R_RISCV_NONE);
+  	*again = TRUE;
+  	return riscv_relax_delete_bytes (abfd, sec, rel->r_offset, 2);
+  }
+#endif
 
   /* Can we relax LUI to C.LUI?  Alignment might move the section forward;
      account for this assuming page alignment at worst.  */
@@ -2929,6 +2972,8 @@ _bfd_riscv_relax_section (bfd *abfd, asection *sec,
 	}
       else if (type == R_RISCV_ALIGN)
 	relax_func = _bfd_riscv_relax_align;
+      else if (type == R_RISCV_RVC_LUI)
+	relax_func = _bfd_riscv_relax_clean_rvc;
 
       if (!relax_func)
 	continue;

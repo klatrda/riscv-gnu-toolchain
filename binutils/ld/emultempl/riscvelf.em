@@ -33,7 +33,8 @@ static int TRACE = 0;
 static int Warn_Chip_Info = 0;
 static int Error_Chip_Info = 0;
 
-static struct Pulp_Target_Chip Pulp_Chip =  {PULP_CHIP_NONE, PULP_NONE, -1, -1, -1, -1, -1};
+static struct Pulp_Target_Chip Pulp_Chip = {PULP_CHIP_NONE, PULP_NONE, -1, -1, -1, -1, -1};
+static struct Pulp_Target_Chip DefChipInfo = {PULP_CHIP_NONE, PULP_NONE, 0, 1, 1024*256, 64*1024, 0};
 
 static void
 riscv_elf_after_open(void)
@@ -100,6 +101,7 @@ riscv_elf_before_allocation (void)
 	struct Pulp_Target_Chip ChipInfo = {PULP_CHIP_NONE, PULP_NONE, -1, -1, -1, -1, -1};
 	struct Pulp_Target_Chip CurChipInfo;
 	int Error = 0;
+	int NoMerge = 0;
 
 
 	if (TRACE) fprintf(stderr, "Linker Passed Config: %s\n", PulpChipInfoImage(&Pulp_Chip, CharBuff));
@@ -127,6 +129,7 @@ riscv_elf_before_allocation (void)
 					if (Warn_Chip_Info || Error_Chip_Info)
 						einfo(_("Can't merge .Pulp_Chip.Info section in %s with current\n"), b->filename);
 					if (Error_Chip_Info) Error++;
+					NoMerge=1;
 				}
 			} else {
 				Pt = buf;
@@ -148,6 +151,12 @@ riscv_elf_before_allocation (void)
 	if (MergeChipInfo(&Pulp_Chip, &ChipInfo, 1) == 0) {
 		if (Warn_Chip_Info||Error_Chip_Info) einfo(_("Can't merge .Pulp_Chip.Info from sections with linker passed infos\n"));
 		if (Error_Chip_Info) Error++;
+		NoMerge=1;
+	}
+
+	if ((Pulp_Chip.chip != PULP_CHIP_NONE) && NoMerge) {
+		einfo(_("-mchip given to linker but can't merge .Pulp_Chip.Info from sections with linker passed infos\n"));
+		Error++;
 	}
 
 	if (TRACE) fprintf(stderr, "Merged Config, Final: %s\n", PulpChipInfoImage(&ChipInfo, CharBuff));
@@ -184,6 +193,41 @@ riscv_elf_before_allocation (void)
 		memcpy (s->contents + 12 + PULPINFO_NAMESZ, data, size);
 		free (data);
 	}
+
+  {
+        struct bfd_link_hash_entry *h = NULL;
+
+        h = bfd_link_hash_lookup (link_info.hash, "pulp__PE", TRUE, FALSE, TRUE);
+        lang_update_definedness ("pulp__PE", h);
+        if (NoMerge) h->u.def.value = DefChipInfo.Pulp_PE;
+        else h->u.def.value = ChipInfo.Pulp_PE;
+        h->type = bfd_link_hash_defined; h->u.def.section = abs_output_section->bfd_section;
+
+        h = bfd_link_hash_lookup (link_info.hash, "pulp__FC", TRUE, FALSE, TRUE);
+        lang_update_definedness ("pulp__FC", h);
+        if (NoMerge) h->u.def.value = DefChipInfo.Pulp_FC;
+        else h->u.def.value = ChipInfo.Pulp_FC;
+        h->type = bfd_link_hash_defined; h->u.def.section = abs_output_section->bfd_section;
+
+        h = bfd_link_hash_lookup (link_info.hash, "pulp__L2", TRUE, FALSE, TRUE);
+        lang_update_definedness ("pulp__L2", h);
+        if (NoMerge) h->u.def.value = DefChipInfo.Pulp_L2_Size;
+        else h->u.def.value = ChipInfo.Pulp_L2_Size;
+        h->type = bfd_link_hash_defined; h->u.def.section = abs_output_section->bfd_section;
+
+        h = bfd_link_hash_lookup (link_info.hash, "pulp__L1CL", TRUE, FALSE, TRUE);
+        lang_update_definedness ("pulp__L1CL", h);
+        if (NoMerge) h->u.def.value = DefChipInfo.Pulp_L1_Cluster_Size;
+        else h->u.def.value = ChipInfo.Pulp_L1_Cluster_Size;
+        h->type = bfd_link_hash_defined; h->u.def.section = abs_output_section->bfd_section;
+
+        h = bfd_link_hash_lookup (link_info.hash, "pulp__L1FC", TRUE, FALSE, TRUE);
+        lang_update_definedness ("pulp__L1FC", h);
+        if (NoMerge) h->u.def.value = DefChipInfo.Pulp_L1_FC_Size;
+        else h->u.def.value = ChipInfo.Pulp_L1_FC_Size;
+        h->type = bfd_link_hash_defined; h->u.def.section = abs_output_section->bfd_section;
+
+  }
 
 
   gld${EMULATION_NAME}_before_allocation ();
