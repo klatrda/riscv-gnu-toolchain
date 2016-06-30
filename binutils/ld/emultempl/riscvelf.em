@@ -194,7 +194,7 @@ riscv_elf_before_allocation (void)
 		free (data);
 	}
 
-if (0)  {
+ {
         struct bfd_link_hash_entry *h = NULL;
 
         h = bfd_link_hash_lookup (link_info.hash, "pulp__PE", TRUE, FALSE, TRUE);
