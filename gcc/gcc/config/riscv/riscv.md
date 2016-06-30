@@ -2958,7 +2958,8 @@
 
 (define_insn "OffsetedReadNonVol"
   [(set (match_operand:SI 0 "register_operand" "=r")
-	(mem:SI (plus:SI (match_operand:SI 1 "register_operand" "r") (match_operand:SI 2 "immediate_operand" "i")))
+	;; (mem:SI (plus:SI (match_operand:SI 1 "register_operand" "r") (match_operand:SI 2 "immediate_operand" "i")))
+	(mem:SI (plus:SI (match_operand:SI 1 "register_operand" "r") (match_operand:SI 2 "const_arith_operand" "i")))
    )
   ]
   "(Pulp_Cpu>=PULP_V2)"
