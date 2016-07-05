@@ -1167,7 +1167,7 @@
 
 (define_insn "fl1si2"
   [(set (match_operand:SI 0 "register_operand" "=r")
-        (minus:SI (const_int 32)
+        (minus:SI (const_int 31)
                   (clz:SI (match_operand:SI 1 "register_operand" "r"))
         )
    )
@@ -1189,7 +1189,7 @@
 {
         rtx reg = gen_reg_rtx (SImode);
 
-        emit_insn (gen_rtx_SET (SImode, reg, gen_rtx_CONST_INT(SImode, 32)));
+        emit_insn (gen_rtx_SET (SImode, reg, gen_rtx_CONST_INT(SImode, 31)));
         emit_insn (gen_fl1si2(operands[0], operands[1]));
         emit_insn (gen_subsi3(operands[0], reg, operands[0]));
         DONE;
