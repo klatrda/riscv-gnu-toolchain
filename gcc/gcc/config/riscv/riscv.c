@@ -2215,8 +2215,10 @@ riscv_emit_compare (enum rtx_code *code, rtx *op0, rtx *op1)
 
 	    case EQ:
 	    case NE:
+              if ((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOBALL && (*code == EQ || *code == NE) && (GET_CODE(*op1) == CONST_INT) &&
+	          (INTVAL(*op1) >= -16) && (INTVAL(*op1) <= 15)) {
+              } else if (SMALL_OPERAND (-rhs))
 	      /* Convert e.g. OP0 == 2048 into OP0 - 2048 == 0.  */
-	      if (SMALL_OPERAND (-rhs))
 		{
 		  *op0 = gen_reg_rtx (GET_MODE (cmp_op0));
 		  riscv_emit_binary (PLUS, *op0, cmp_op0, GEN_INT (-rhs));
@@ -2227,8 +2229,17 @@ riscv_emit_compare (enum rtx_code *code, rtx *op0, rtx *op1)
 	    }
 	}
 
+      if ((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOBALL && (*code == EQ || *code == NE) && (GET_CODE(*op1) == CONST_INT) &&
+	  (INTVAL(*op1) >= -16) && (INTVAL(*op1) <= 15)) {
+      } else {
+	*op1 = force_reg (GET_MODE (cmp_op0), *op1);
+      }
+
+
+/*
       if (*op1 != const0_rtx && !(((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOBALL) && *code == EQ && *op1 == constm1_rtx))
 	*op1 = force_reg (GET_MODE (cmp_op0), *op1);
+*/
     }
   else
     {

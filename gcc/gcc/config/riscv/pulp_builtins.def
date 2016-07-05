@@ -180,6 +180,7 @@ Currently these macros are used in 2 contexts:
 
   DIRECT_BUILTIN1(load_evt_unit,       	event_unit_read, RISCV_INT_FTYPE_POINTER_INT,         		pulp_v2, CheckBuiltin)
   DIRECT_BUILTIN1(OffsetedRead,		OffsetedRead,	RISCV_INT_FTYPE_POINTER_INT,			pulp_v2, NULL)
+  DIRECT_BUILTIN1(OffsetedReadOMP,	OffsetedReadOMP,RISCV_INT_FTYPE_POINTER_INT,			pulp_v2, NULL)
 
   DIRECT_BUILTIN1(OffsetedReadNonVol,	CoreCount,	RISCV_INT_FTYPE_VOID,				pulp_vall, CheckBuiltin)
   DIRECT_BUILTIN1(read_spr,		CoreId,		RISCV_INT_FTYPE_VOID,				pulp_vall, CheckBuiltin)

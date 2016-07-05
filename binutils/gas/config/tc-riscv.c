@@ -669,6 +669,9 @@ validate_riscv_insn (const struct riscv_opcode *opc)
 		} else if (*p == 'i') {
 			used_bits |= ENCODE_I5_1_TYPE_UIMM(-1U);
 			++p; break;
+		} else if (*p == 'I') {
+			used_bits |= ENCODE_I5_1_TYPE_IMM(-1U);
+			++p; break;
 		} else if (*p == 's' || *p == 'u' || *p == 'U' || *p == 'f' || *p == 'F') {
 			used_bits |= ENCODE_I6TYPE_IMM(-1U);
 			++p; break;
@@ -1776,6 +1779,7 @@ rvc_lui:
 		   b3: 5 bits immediate for scallimm
 		   b5: 5 bits unsigned immediate bits[29..25]
 		   bi: 5 bits unsigned immediate bits[24..20]
+		   bI: 5 bits signed immediate bits[24..20]
 		   bs: 6 bits signed immediate for vector instructions
 		   bu: 6 bits unsigned immediate for vector instructions
 		   bU: 6 bits unsigned imm
@@ -1845,6 +1849,13 @@ rvc_lui:
 	        s = expr_end;
 		if (imm_expr->X_add_number<0 || imm_expr->X_add_number>31) break;
 	        ip->insn_opcode |= ENCODE_I5TYPE_UIMM (imm_expr->X_add_number);
+		++args;
+              } else if (args[1]=='I') {
+	        my_getExpression (imm_expr, s);
+		check_absolute_expr (ip, imm_expr);
+	        s = expr_end;
+		if (imm_expr->X_add_number<-16 || imm_expr->X_add_number>15) break;
+	        ip->insn_opcode |= ENCODE_I5_1_TYPE_IMM (imm_expr->X_add_number);
 		++args;
               } else if (args[1]=='i') {
 	        my_getExpression (imm_expr, s);

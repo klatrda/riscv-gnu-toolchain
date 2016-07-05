@@ -64,12 +64,13 @@
   (ior (match_operand 0 "const_0_operand")
        (match_operand 0 "register_operand")))
 
-(define_predicate "reg_or_0_or_m1_operand"
+(define_predicate "reg_or_imm5_operand"
   (ior (ior (match_operand 0 "const_0_operand")
 	    (and (match_test "(!TARGET_MASK_NOBALL)")
                  (and (match_test "(Pulp_Cpu>=PULP_V2)")
                       (and (match_code "const_int")
-	                   (match_test "op == CONSTM1_RTX (GET_MODE (op))")))))
+			   (and (match_test "(INTVAL(op)>=-16)")
+				(match_test "(INTVAL(op)<=15)"))))))
        (match_operand 0 "register_operand"))
 )
 
@@ -239,11 +240,11 @@
 (define_predicate "order_operator"
   (match_code "eq,ne,lt,ltu,le,leu,ge,geu,gt,gtu"))
 
-(define_predicate "order_operator_eq"
-  (match_code "eq"))
+(define_predicate "order_operator_eq_ne"
+  (match_code "eq,ne"))
 
-(define_predicate "order_operator_wo_eq"
-  (match_code "ne,lt,ltu,le,leu,ge,geu,gt,gtu"))
+(define_predicate "order_operator_wo_eq_ne"
+  (match_code "lt,ltu,le,leu,ge,geu,gt,gtu"))
 
 (define_predicate "fp_order_operator"
   (match_code "eq,lt,le,gt,ge"))

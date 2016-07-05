@@ -103,6 +103,8 @@ static const char * const riscv_pred_succ[16] = {
   (RV_X(x, 25, 5))
 #define EXTRACT_I5_1_TYPE_UIMM(x) \
   (RV_X(x, 20, 5))
+#define EXTRACT_I5_1_TYPE_IMM(x) \
+  (RV_X(x, 20, 5))
 
 #define ENCODE_ITYPE_IMM(x) \
   (RV_X(x, 0, 12) << 20)
@@ -147,6 +149,8 @@ static const char * const riscv_pred_succ[16] = {
 #define ENCODE_I5TYPE_UIMM(x) \
   (RV_X(x, 0, 5) << 25)
 #define ENCODE_I5_1_TYPE_UIMM(x) \
+  (RV_X(x, 0, 5) << 20)
+#define ENCODE_I5_1_TYPE_IMM(x) \
   (RV_X(x, 0, 5) << 20)
 
 #define VALID_ITYPE_IMM(x) (EXTRACT_ITYPE_IMM(ENCODE_ITYPE_IMM(x)) == (x))

@@ -131,7 +131,7 @@
   "@internal"
   (and (match_test "(Pulp_Cpu>=PULP_V2)")
        (and (match_code "const_int")
-            (match_test "op == CONSTM1_RTX (mode)"))))
+	    (and (match_test "(INTVAL(op)>=-16)") (match_test "(INTVAL(op)<=15)")))))
 
 (define_constraint "vIsdc"
   "A constant vector with identical elements in [-32..31]"

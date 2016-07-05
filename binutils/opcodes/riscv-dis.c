@@ -388,6 +388,8 @@ print_insn_args (const char *d, insn_t l, bfd_vma pc, disassemble_info *info)
 	     print (info->stream, "%d", (int) EXTRACT_I1TYPE_UIMM (l)); ++d;
           } else if (d[1]=='5') {
 	     print (info->stream, "%d", ((int) EXTRACT_I5TYPE_UIMM (l))&0x1F); ++d;
+          } else if (d[1]=='I') {
+	     print (info->stream, "%d", ((int) EXTRACT_I5_1_TYPE_IMM (l)<<27)>>27); ++d;
           } else if (d[1]=='i') {
 	     print (info->stream, "%d", ((int) EXTRACT_I5_1_TYPE_UIMM (l))&0x1F); ++d;
 	  } else if (d[1]=='s') {
