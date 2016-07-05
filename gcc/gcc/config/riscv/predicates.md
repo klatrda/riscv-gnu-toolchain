@@ -65,13 +65,13 @@
        (match_operand 0 "register_operand")))
 
 (define_predicate "reg_or_imm5_operand"
-  (ior (ior (match_operand 0 "const_0_operand")
-	    (and (match_test "(!TARGET_MASK_NOBALL)")
-                 (and (match_test "(Pulp_Cpu>=PULP_V2)")
-                      (and (match_code "const_int")
-			   (and (match_test "(INTVAL(op)>=-16)")
-				(match_test "(INTVAL(op)<=15)"))))))
-       (match_operand 0 "register_operand"))
+  (ior (match_operand 0 "register_operand")
+       (and (match_code "const_int")
+            (ior (match_operand 0 "const_0_operand")
+	         (match_test "((!TARGET_MASK_NOBALL) && (Pulp_Cpu>=PULP_V2) && (INTVAL(op)>=-16) && (INTVAL(op)<=15))")
+            )
+       )
+  )
 )
 
 (define_predicate "const_1_operand"
