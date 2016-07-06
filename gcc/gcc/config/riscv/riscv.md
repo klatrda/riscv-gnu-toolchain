@@ -5448,7 +5448,7 @@
 {
   if (GET_CODE (operands[3]) == CONST_INT) {
     if ((INTVAL(operands[3]) != 0) && (INTVAL(operands[3])>=-16) && (INTVAL(operands[3])<=15)) {
-	return "pv.b%C1imm\t%2,%3,%0";
+	return "p.b%C1imm\t%2,%3,%0";
     } else return "b%C1z\t%2,%0";
   } return "b%C1\t%2,%3,%0";
 }

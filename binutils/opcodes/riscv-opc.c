@@ -1231,8 +1231,8 @@ const struct riscv_opcode riscv_builtin_opcodes[] =
 {"pv.ball",       	"Xpulpv2",  "s,p",  	MATCH_BEQM1, 			MASK_BEQM1|MASK_RS2, 	match_opcode,   RD_xs1 },
 {"pv.bnall",       	"Xpulpv2",  "s,p",  	MATCH_BNEM1, 			MASK_BNEM1|MASK_RS2, 	match_opcode,   RD_xs1 },
 */
-{"pv.beqimm",       	"Xpulpv2",  "s,bI,p",  	MATCH_BEQM1, 				MASK_BEQM1, 	match_opcode,   RD_xs1 },
-{"pv.bneimm",       	"Xpulpv2",  "s,bI,p",  	MATCH_BNEM1, 				MASK_BNEM1, 	match_opcode,   RD_xs1 },
+{"p.beqimm",       	"Xpulpv2",  "s,bI,p",  	MATCH_BEQM1, 				MASK_BEQM1, 	match_opcode,   RD_xs1 },
+{"p.bneimm",       	"Xpulpv2",  "s,bI,p",  	MATCH_BNEM1, 				MASK_BNEM1, 	match_opcode,   RD_xs1 },
 
 /* Load from event unit */
 
@@ -1637,8 +1637,8 @@ const struct riscv_opcode riscv_builtin_opcodes[] =
 {"pv.ball",       	"Xpulpv3",  "s,p",  	MATCH_BEQM1, 			MASK_BEQM1|MASK_RS2, 	match_opcode,   RD_xs1 },
 {"pv.bnall",       	"Xpulpv3",  "s,p",  	MATCH_BNEM1, 			MASK_BNEM1|MASK_RS2, 	match_opcode,   RD_xs1 },
 */
-{"pv.beqimm",       	"Xpulpv3",  "s,bI,p",  	MATCH_BEQM1, 				MASK_BEQM1, 	match_opcode,   RD_xs1 },
-{"pv.bneimm",       	"Xpulpv3",  "s,bI,p",  	MATCH_BNEM1, 				MASK_BNEM1, 	match_opcode,   RD_xs1 },
+{"p.beqimm",       	"Xpulpv3",  "s,bI,p",  	MATCH_BEQM1, 				MASK_BEQM1, 	match_opcode,   RD_xs1 },
+{"p.bneimm",       	"Xpulpv3",  "s,bI,p",  	MATCH_BNEM1, 				MASK_BNEM1, 	match_opcode,   RD_xs1 },
 
 /* Load from event unit */
 
