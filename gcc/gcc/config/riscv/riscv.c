@@ -2229,8 +2229,8 @@ riscv_emit_compare (enum rtx_code *code, rtx *op0, rtx *op1)
 	    }
 	}
 
-      if ((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOBALL && (*code == EQ || *code == NE) && (GET_CODE(*op1) == CONST_INT) &&
-	  (INTVAL(*op1) >= -16) && (INTVAL(*op1) <= 15)) {
+      if ((*op1 == const0_rtx) || ((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOBALL && (*code == EQ || *code == NE) && (GET_CODE(*op1) == CONST_INT) &&
+	  (INTVAL(*op1) >= -16) && (INTVAL(*op1) <= 15))) {
       } else {
 	*op1 = force_reg (GET_MODE (cmp_op0), *op1);
       }
