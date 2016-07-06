@@ -5036,8 +5036,8 @@ static struct {
 	int 	Index;
 } Native_GOMP_Builtins[NATIVE_GOMP_LAST] = 
 {
-	{NULL, 0x00204000, 0x90},		// OMP Loop Chunk Size
-	{NULL, 0x00204000, 0x84},		// OMP Loop Start
+	{NULL, 0x00204000, 0x70},		// OMP Loop Chunk Size
+	{NULL, 0x00204000, 0x64},		// OMP Loop Start
 };
 
 unsigned int GetRemappedGompBuiltin(unsigned int ompcode, unsigned int def_ret)
