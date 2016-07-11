@@ -1120,13 +1120,13 @@
   [(set (match_operand:SI 0 "register_operand" "=r")
         (ashiftrt:SI
                 (plus:SI (match_operand:SI 1 "register_operand" "r")
-                         (match_operand:SI 2 "register_operand" "r"))
+                         (match_operand:SI 2 "reg_or_0_operand" "rJ"))
                 (const_int 1)
         )
    )
   ]
 "((Pulp_Cpu>=PULP_V0) && !TARGET_MASK_NOMINMAX)"
-{ return (Pulp_Cpu >= PULP_V2) ? "p.addN \t%0,%1,%2,1" : "p.avg \t%0,%1,%2"; }
+{ return (Pulp_Cpu >= PULP_V2) ? "p.addN \t%0,%1,%z2,1" : "p.avg \t%0,%1,%z2"; }
 [(set_attr "type" "arith")
  (set_attr "mode" "SI")]
 )
@@ -1135,13 +1135,13 @@
   [(set (match_operand:SI 0 "register_operand" "=r")
         (lshiftrt:SI
                 (plus:SI (match_operand:SI 1 "register_operand" "r")
-                         (match_operand:SI 2 "register_operand" "r"))
+                         (match_operand:SI 2 "reg_or_0_operand" "rJ"))
                 (const_int 1)
         )
    )
   ]
 "((Pulp_Cpu>=PULP_V0) && !TARGET_MASK_NOMINMAX)"
-{ return (Pulp_Cpu >= PULP_V2) ? "p.adduN \t%0,%1,%2,1" : "p.avgu \t%0,%1,%2"; }
+{ return (Pulp_Cpu >= PULP_V2) ? "p.adduN \t%0,%1,%z2,1" : "p.avgu \t%0,%1,%z2"; }
 [(set_attr "type" "arith")
  (set_attr "mode" "SI")]
 )
@@ -1800,14 +1800,14 @@
         (norm_op:SI
                 (plus:SI
                         (match_operand:SI 1 "register_operand" "r")
-                        (match_operand:SI 2 "register_operand" "r")
+                        (match_operand:SI 2 "reg_or_0_operand" "rJ")
                 )
                 (match_operand:SI 3 "immediate_operand" "i")
         )
    )
   ]
   "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOADDSUBNORMROUND && riscv_valid_norm_round_imm_op(operands[3], NULL))"
-  "p.add<norm_sign>N \t%0,%1,%2,%3"
+  "p.add<norm_sign>N \t%0,%1,%z2,%3"
 [(set_attr "type" "arith")
  (set_attr "mode" "SI")]
 )
@@ -1817,14 +1817,14 @@
         (norm_op:SI
                 (minus:SI
                         (match_operand:SI 1 "register_operand" "r")
-                        (match_operand:SI 2 "register_operand" "r")
+                        (match_operand:SI 2 "reg_or_0_operand" "rJ")
                 )
                 (match_operand:SI 3 "immediate_operand" "i")
         )
    )
   ]
   "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOADDSUBNORMROUND && riscv_valid_norm_round_imm_op(operands[3], NULL))"
-  "p.sub<norm_sign>N \t%0,%1,%2,%3"
+  "p.sub<norm_sign>N \t%0,%1,%z2,%3"
 [(set_attr "type" "arith")
  (set_attr "mode" "SI")]
 )
@@ -1835,7 +1835,7 @@
                 (plus:SI
                         (plus:SI
                                 (match_operand:SI 1 "register_operand" "r")
-                                (match_operand:SI 2 "register_operand" "r")
+                                (match_operand:SI 2 "reg_or_0_operand" "rJ")
                         )
                         (match_operand:SI 4 "immediate_operand" "i")
                 )
@@ -1844,7 +1844,7 @@
    )
   ]
   "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOADDSUBNORMROUND && riscv_valid_norm_round_imm_op(operands[3], operands[4]))"
-  "p.add<norm_sign>RN \t%0,%1,%2,%3"
+  "p.add<norm_sign>RN \t%0,%1,%z2,%3"
 [(set_attr "type" "arith")
  (set_attr "mode" "SI")]
 )
@@ -1855,7 +1855,7 @@
                 (plus:SI
                         (minus:SI
                                 (match_operand:SI 1 "register_operand" "r")
-                                (match_operand:SI 2 "register_operand" "r")
+                                (match_operand:SI 2 "reg_or_0_operand" "rJ")
                         )
                         (match_operand:SI 4 "immediate_operand" "i")
                 )
@@ -1864,7 +1864,7 @@
    )
   ]
   "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOADDSUBNORMROUND && riscv_valid_norm_round_imm_op(operands[3], operands[4]))"
-  "p.sub<norm_sign>RN \t%0,%1,%2,%3"
+  "p.sub<norm_sign>RN \t%0,%1,%z2,%3"
 [(set_attr "type" "arith")
  (set_attr "mode" "SI")]
 )
@@ -3999,9 +3999,9 @@
 
 ;; Vector Extract
 
-(define_insn "vec_extract_sext_<VMODEALL:mode>"
-  [(set (match_operand:SI 0 "register_operand" "=r")
-        (sign_extend:SI
+(define_insn "vec_extract_sext_<SUBDI:mode>_<VMODEALL:mode>"
+  [(set (match_operand:SUBDI 0 "register_operand" "=r")
+        (sign_extend:SUBDI
           (vec_select:<vec_scalar_elmt>
              (match_operand:VMODEALL 1 "register_operand" "r")
              (parallel [(match_operand:SI 2 "immediate_operand" "i")])
@@ -4012,12 +4012,12 @@
   "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOVECT)"
   "pv.extract.<vec_size>\t%0,%1,%2\t # vect extract, with sign ext"
 [(set_attr "type" "move")
- (set_attr "mode" "SI")]
+ (set_attr "mode" "<SUBDI:MODE>")]
 )
 
-(define_insn "vec_extract_zext_<VMODEALL:mode>"
-  [(set (match_operand:SI 0 "register_operand" "=r")
-        (zero_extend:SI
+(define_insn "vec_extract_zext_<SUBDI:mode>_<VMODEALL:mode>"
+  [(set (match_operand:SUBDI 0 "register_operand" "=r")
+        (zero_extend:SUBDI
           (vec_select:<vec_scalar_elmt>
              (match_operand:VMODEALL 1 "register_operand" "r")
              (parallel [(match_operand:SI 2 "immediate_operand" "i")])
@@ -4028,7 +4028,7 @@
   "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOVECT)"
   "pv.extractu.<vec_size>\t%0,%1,%2\t # vect extract, with zero ext"
 [(set_attr "type" "move")
- (set_attr "mode" "SI")]
+ (set_attr "mode" "<SUBDI:MODE>")]
 )
 
 (define_insn "vec_extract<VMODEALL:mode>"

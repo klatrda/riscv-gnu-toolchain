@@ -284,9 +284,6 @@ static void pulp_set_chip(const char *arg)
   } else if (strncmp (p, "HONEY", 5) == 0) {
 	riscv_set_arch ("IXpulpv0");
 	UpdatePulpChip(&Pulp_Chip, &Pulp_Defined_Chips[PULP_CHIP_HONEY]);
-  } else if (strncmp (p, "GAP8", 4) == 0) {
-	riscv_set_arch ("IXgap8");
-	UpdatePulpChip(&Pulp_Chip, &Pulp_Defined_Chips[PULP_CHIP_GAP8]);
   } else {
 	as_fatal ("unsupported pulp chip %s", arg);
   }
