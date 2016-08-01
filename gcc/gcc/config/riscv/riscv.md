@@ -1165,6 +1165,17 @@
  (set_attr "mode" "SI")]
 )
 
+(define_insn "clrsbsi2"
+  [(set (match_operand:SI 0 "register_operand" "=r")
+        (clrsb:SI (match_operand:SI 1 "register_operand" "r"))
+   )
+  ]
+"(!TARGET_MASK_NOBITOP)"
+"p.clb \t%0, %1\t # count leading bits, int"
+[(set_attr "type" "arith")
+ (set_attr "mode" "SI")]
+)
+
 (define_insn "fl1si2"
   [(set (match_operand:SI 0 "register_operand" "=r")
         (minus:SI (const_int 31)
@@ -1196,9 +1207,9 @@
 }"
 )
 
-(define_insn "ffsi2"
+(define_insn "ctzsi2"
   [(set (match_operand:SI 0 "register_operand" "=r")
-        (ffs:SI (match_operand:SI 1 "register_operand" "r")
+        (ctz:SI (match_operand:SI 1 "register_operand" "r")
         )
    )
   ]
@@ -1207,6 +1218,21 @@
 [(set_attr "type" "arith")
  (set_attr "mode" "SI")]
 )
+
+(define_expand "paritysi2"
+  [(set (match_operand:SI 0 "register_operand" "=r")
+	(parity:SI (match_operand:SI 1 "register_operand" "r"))
+   )
+  ]
+"((Pulp_Cpu>=PULP_V0) && !TARGET_MASK_NOBITOP)"
+"
+{
+        emit_insn (gen_popcountsi2(operands[0], operands[1]));
+	emit_insn (gen_extzvsi(operands[0], operands[0], gen_rtx_CONST_INT(SImode, 1), gen_rtx_CONST_INT(SImode, 0)));
+        DONE;
+}"
+)
+
 
 ;;
 ;;  ....................

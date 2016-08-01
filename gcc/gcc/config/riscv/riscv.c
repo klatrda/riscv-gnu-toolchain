@@ -871,6 +871,17 @@ riscv_classify_address (struct riscv_address_info *info, rtx x,
       info->reg = XEXP (x, 0);
       info->mode = mode;
       if (GET_CODE(XEXP(x, 1)) == PLUS) {
+	 if (XEXP (XEXP(x, 1), 0) != info->reg) {
+      	 	/* In some cases the combiner can send a post modify built in a non standard way with the offset
+	    	   in the left branch while the canonical representation always put it in the right branch */
+		if (info->offset == info->reg) {
+			/* Swap plus branches */
+			rtx Tmp = XEXP (XEXP(x, 1), 1);
+			XEXP (XEXP(x, 1), 1) = XEXP (XEXP(x, 1), 0);
+			XEXP (XEXP(x, 1), 0) = Tmp;
+			
+		} else return false;
+	 }
          info->offset = XEXP (XEXP(x, 1), 1);
 	 if (GET_CODE(info->offset) == CONST_INT) {
                 if (!const_arith_operand (info->offset, Pmode)) return FALSE;
@@ -880,6 +891,7 @@ riscv_classify_address (struct riscv_address_info *info, rtx x,
          	       && riscv_valid_base_register_p (info->offset, mode, strict_p));
          }
       }
+      return false;
 
     case LABEL_REF:
     case SYMBOL_REF:
@@ -2352,7 +2364,12 @@ void riscv_expand_vector_init(rtx target, rtx vals)
 		if (i > 0 && !rtx_equal_p (x, XVECEXP (vals, 0, 0))) all_same = false;
 	}
 	if (all_same) {
-		x = copy_to_mode_reg (inner_mode, XVECEXP (vals, 0, 0));
+		rtx y;
+		if (inner_mode != GET_MODE(XVECEXP (vals, 0, 0)))
+			// Should not happen but for vector shift with a replicated scalar it happens
+			y = simplify_gen_subreg (inner_mode,  XVECEXP (vals, 0, 0), GET_MODE(XVECEXP (vals, 0, 0)), 0);
+		else y =  XVECEXP (vals, 0, 0);
+		x = copy_to_mode_reg (inner_mode, y); // XVECEXP (vals, 0, 0));
 		emit_insn (gen_rtx_SET (VOIDmode, target, gen_rtx_VEC_DUPLICATE (mode, x)));
 		return;
 	}
