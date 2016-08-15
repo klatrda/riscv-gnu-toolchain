@@ -3152,7 +3152,7 @@
     DONE;
 })
 
-(define_insn "*movv2hi_internal"
+(define_insn "movv2hi_internal"
   [(set (match_operand:V2HI 0 "nonimmediate_operand" "=r,r,r,m")
 	(match_operand:V2HI 1 "move_operand" "r,T,m,rJ"))]
   "(register_operand (operands[0], V2HImode) || reg_or_0_operand (operands[1], V2HImode)) &&
@@ -3173,7 +3173,7 @@
     DONE;
 })
 
-(define_insn "*movv4qi_internal"
+(define_insn "movv4qi_internal"
   [(set (match_operand:V4QI 0 "nonimmediate_operand" "=r,r,r,m")
 	(match_operand:V4QI 1 "move_operand" "r,T,m,rJ"))]
   "(register_operand (operands[0], V4QImode) || reg_or_0_operand (operands[1], V4QImode)) &&
@@ -3962,42 +3962,43 @@
  (set_attr "mode" "SI,SI")]
 )
 
-(define_insn "vec_set_fisrt<VMODEALL2:mode>_internal"
+(define_insn "vec_set_first<VMODEALL2:mode>_internal"
   [(set (match_operand:VMODEALL2 0 "register_operand" "=r,r")
         (vec_merge:VMODEALL2
           (vec_duplicate:VMODEALL2 (match_operand:<vec_scalar_elmt> 1 "nonmemory_operand" "r,J"))
 	  (const_vector:VMODEALL2 [(const_int 0) (const_int 0)])
-          (match_operand:SI 2 "immediate_operand" "i,i")))]
+          (match_operand:SI 2 "const_1_operand" "Z,Z")))]
   "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOVECT)"
 {
   int elt = ffs ((int) INTVAL (operands[2])) - 1;
 
   operands[2] = GEN_INT (elt);
-  if (which_alternative == 0) return "pv.insert.<vec_size>\t%0,%1,%2\t # Vect insert";
-  else return "pv.insert.<vec_size>\t%0,x0,%2\t # Vect insert 0";
+  if (which_alternative == 0) {
+	return "pv.exthz \t%0,%1\t # Vect first insert half, pos 0";
+  } else return "add\t%0,x0,%2\t # Vect first insert half 0, pos 0";
 }
 [(set_attr "type" "move,move")
  (set_attr "mode" "SI,SI")]
 )
 
-(define_insn "vec_set_fisrt<VMODEALL4:mode>_internal"
+(define_insn "vec_set_first<VMODEALL4:mode>_internal"
   [(set (match_operand:VMODEALL4 0 "register_operand" "=r,r")
         (vec_merge:VMODEALL4
           (vec_duplicate:VMODEALL4 (match_operand:<vec_scalar_elmt> 1 "nonmemory_operand" "r,J"))
 	  (const_vector:VMODEALL4 [(const_int 0) (const_int 0) (const_int 0) (const_int 0)])
-          (match_operand:SI 2 "immediate_operand" "i,i")))]
+          (match_operand:SI 2 "const_1_operand" "Z,Z")))]
   "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOVECT)"
 {
   int elt = ffs ((int) INTVAL (operands[2])) - 1;
 
   operands[2] = GEN_INT (elt);
-  if (which_alternative == 0) return "pv.insert.<vec_size>\t%0,%1,%2\t # Vect insert";
-  else return "pv.insert.<vec_size>\t%0,x0,%2\t # Vect insert 0";
+  if (which_alternative == 0) {
+	return "and\t%0,%1,0xff\t # Vect first insert byte, pos 0";
+  } else return "add\t%0,x0,%2\t # Vect first insert, pos 0";
 }
 [(set_attr "type" "move,move")
  (set_attr "mode" "SI,SI")]
 )
-
 
 (define_expand "vec_set_first<VMODEALL:mode>"
   [(match_operand:VMODEALL 0 "register_operand" "")
@@ -4005,10 +4006,14 @@
    (match_operand:SI 2 "immediate_operand" "")]
   "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOVECT)"
 {
-  HOST_WIDE_INT elem = (HOST_WIDE_INT) 1 << INTVAL (operands[2]);
-  rtx Vect_Zero[4] = {const0_rtx, const0_rtx, const0_rtx, const0_rtx};
-  rtx zero_vect = gen_rtx_CONST_VECTOR (<MODE>mode, gen_rtvec_v (GET_MODE_NUNITS(<MODE>mode), Vect_Zero));
-  emit_insn (gen_vec_set<mode>_internal (operands[0], operands[1], GEN_INT (elem), zero_vect));
+  HOST_WIDE_INT elem = (HOST_WIDE_INT) 1 << INTVAL (operands[2]);	/* Should always be 1 */
+
+  if ((GET_CODE (operands[1]) == CONST_INT) && (INTVAL(operands[1]) != 0)) {
+	rtx Vect_Zero[4] = {const0_rtx, const0_rtx, const0_rtx, const0_rtx};
+	rtx zero_vect = gen_rtx_CONST_VECTOR (<MODE>mode, gen_rtvec_v (GET_MODE_NUNITS(<MODE>mode), Vect_Zero));
+	emit_insn(gen_mov<mode>_internal(operands[0], zero_vect));
+  	emit_insn (gen_vec_set<mode>_internal (operands[0], operands[1], GEN_INT (elem), operands[0]));
+  } else emit_insn (gen_vec_set_first<mode>_internal (operands[0], operands[1], GEN_INT (elem)));
   DONE;
 })
 

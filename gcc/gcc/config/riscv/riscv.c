@@ -2373,17 +2373,24 @@ void riscv_expand_vector_init(rtx target, rtx vals)
 		emit_insn (gen_rtx_SET (VOIDmode, target, gen_rtx_VEC_DUPLICATE (mode, x)));
 		return;
 	}
-	i = GET_MODE_NUNITS (mode);
-	while (i-- > 0) {
+	// i = GET_MODE_NUNITS (mode);
+	// while (i-- > 0) {
+	/* Since we are in little endian, start from the lsp part. If the first item can be safely moved to a register
+	   with all slices except its one known to be 0 do it otherwise move 0 to the target reg and then insert.
+	   All slices are zeroed therefore we can skip them when their actual value is zero.
+	   We could also extract all slices with an imm value an forge a 32bit constant to be moved to target reg, we
+	   then skip all immediates since they are already in
+	*/
+	for (i = 0; i < n_elts; ++i) {
 		x = copy_to_mode_reg(inner_mode, XVECEXP (vals, 0, i));
 		switch (mode) {
 			case V2HImode:
 				if (first) emit_insn(gen_vec_set_firstv2hi(target, x, GEN_INT(i)));
-				else       emit_insn(gen_vec_setv2hi(target, x, GEN_INT(i)));
+				else if (XVECEXP (vals, 0, i) != const0_rtx) emit_insn(gen_vec_setv2hi(target, x, GEN_INT(i)));
 				break;
 			case V4QImode:
 				if (first) emit_insn(gen_vec_set_firstv4qi(target, x, GEN_INT(i)));
-				else       emit_insn(gen_vec_setv4qi(target, x, GEN_INT(i)));
+				else if (XVECEXP (vals, 0, i) != const0_rtx) emit_insn(gen_vec_setv4qi(target, x, GEN_INT(i)));
 				break;
 			default:
 				abort();
@@ -3529,12 +3536,18 @@ riscv_print_operand (FILE *file, rtx op, int letter)
 	  break;
 
 	case MEM:
-	  if (letter == 'y')
+	  if (letter == 'y') {
 	    fprintf (file, "%s", reg_names[REGNO(XEXP(op, 0))]);
-	  else if (letter && letter != 'z')
+	  } else if (letter && letter != 'z') {
 	    output_operand_lossage ("invalid use of '%%%c'", letter);
-	  else
+	  } else {
 	    output_address (XEXP (op, 0));
+	  }
+/*
+	  if (MEM_ALIGN(op) < GET_MODE_ALIGNMENT(GET_MODE(op))) {
+		fprintf(file, " UUU ");
+	  } else fprintf(file, " AAA ");
+*/	  
 	  break;
 
 	default:
