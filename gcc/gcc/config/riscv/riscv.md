@@ -3974,7 +3974,7 @@
 
   operands[2] = GEN_INT (elt);
   if (which_alternative == 0) {
-	return "pv.exthz \t%0,%1\t # Vect first insert half, pos 0";
+	return "p.exthz \t%0,%1\t # Vect first insert half, pos 0";
   } else return "add\t%0,x0,%2\t # Vect first insert half 0, pos 0";
 }
 [(set_attr "type" "move,move")
