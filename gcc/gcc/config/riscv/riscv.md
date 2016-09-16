@@ -73,6 +73,7 @@
   UNSPEC_READSI
 
   UNSPEC_SPR_READ
+  UNSPEC_SPR_READ_VOL
   UNSPEC_SPR_WRITE
   UNSPEC_SPR_BIT_SET
   UNSPEC_SPR_BIT_CLR
@@ -2820,6 +2821,17 @@
   ]
  "(Pulp_Cpu>=PULP_V2)"
   "csrrs \t%0,%1,x0\t# SPR read"
+  [(set_attr "type" "load")
+   (set_attr "mode" "SI")]
+)
+
+(define_insn "read_spr_vol"
+  [(set (match_operand:SI 0 "register_operand" "=r")
+	(unspec_volatile:SI [(match_operand:SI 1 "immediate_operand" "L")] UNSPEC_SPR_READ_VOL)
+   )
+  ]
+ "(Pulp_Cpu>=PULP_V2)"
+  "csrrs \t%0,%1,x0\t# SPR read, volatile"
   [(set_attr "type" "load")
    (set_attr "mode" "SI")]
 )

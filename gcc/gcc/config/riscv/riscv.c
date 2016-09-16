@@ -4955,12 +4955,13 @@ static int CheckBuiltin(int Code, int BuiltinIndex, struct ExtraBuiltinImmArg *E
 			if (Op[1] && (GET_CODE(Op[1]) == CONST_INT)) return 1;
 			Diag = "__builtin_event_unit_read(base, offset), offset expected to be immediate value";
 			break;
+		case CODE_FOR_read_spr_vol:
 		case CODE_FOR_read_spr:
 			if (Op[0] && (GET_CODE(Op[0]) == CONST_INT)) {
 				unsigned int Reg = UINTVAL(Op[0]);
 				if (Reg <= 4091) return 1;
 			}
-			Diag = "__builtin_pulp_spr_read(Spr) expects Spr to be immediate and in [0..4091]";
+			Diag = "__builtin_pulp_spr_read(Spr) or __builtin_pulp_spr_read_vol(Spr) expects Spr to be immediate and in [0..4091]";
 			break;
 		case CODE_FOR_write_spr:
 			if (Op[0] && (GET_CODE(Op[0]) == CONST_INT)) {

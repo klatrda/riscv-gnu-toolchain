@@ -192,6 +192,7 @@ Currently these macros are used in 2 contexts:
   DIRECT_BUILTIN1(read_spr,		HasFc,		RISCV_INT_FTYPE_VOID,				pulp_vall, CheckBuiltin)
 
 
+  DIRECT_BUILTIN1(read_spr_vol,		spr_read_vol,	RISCV_INT_FTYPE_INT,				pulp_vall, CheckBuiltin)
   DIRECT_BUILTIN1(read_spr,		spr_read,	RISCV_INT_FTYPE_INT,				pulp_vall, CheckBuiltin)
 
   DIRECT_NO_TARGET_BUILTIN1(write_spr,	spr_write,	RISCV_VOID_FTYPE_INT_INT, 			pulp_vall, CheckBuiltin)
