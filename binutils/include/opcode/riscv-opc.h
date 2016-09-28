@@ -901,6 +901,16 @@
 #define MATCH_BCLR	0xC0003033
 #define MATCH_BSET	0xC0004033
 
+
+/* Pulpv3. clip and bit manipulations, arg in register */
+#define MATCH_CLIPR	0x14005033
+#define MATCH_CLIPUR	0x14006033
+#define MATCH_EXTRACTR	0x80000033
+#define MATCH_EXTRACTUR	0x80001033
+#define MATCH_INSERTR	0x80002033
+#define MATCH_BCLRR	0x80003033
+#define MATCH_BSETR	0x80004033
+
 /* Pulpv1 and v2. harware loops */
 #define MASK_HWLP_STARTI 0x000ff07f
 #define MASK_HWLP_ENDI   0x000ff07f
@@ -983,6 +993,17 @@
 #define MATCH_SUBUN	0x8000305B
 #define MATCH_SUBRN	0x0000705B
 #define MATCH_SUBURN	0x8000705B
+
+/* Pulpv3, addN/R, subN/R, arg in register */
+#define MATCH_ADDNR	0x4000205B
+#define MATCH_ADDUNR	0xC000205B
+#define MATCH_ADDRNR	0x4000605B
+#define MATCH_ADDURNR	0xC000605B
+
+#define MATCH_SUBNR	0x4000305B
+#define MATCH_SUBUNR	0xC000305B
+#define MATCH_SUBRNR	0x4000705B
+#define MATCH_SUBURNR	0xC000705B
 
 /* Pulpv2. Vectors */
 #define	MASK_V_OP 0xFE00707F

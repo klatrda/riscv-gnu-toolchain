@@ -157,14 +157,28 @@ Currently these macros are used in 2 contexts:
   DIRECT_BUILTIN1(machhuRNr_si3,	machhuRN,	RISCV_INT_FTYPE_SHORT_SHORT_INT_INT_INT,	pulp_v2, CheckBuiltin)
 
   DIRECT_BUILTIN1(addN_si3,		addN,		RISCV_INT_FTYPE_INT_INT_INT,			pulp_v2, CheckBuiltin)
+  DIRECT_BUILTIN1(addN_reg_si3,		addN_r,		RISCV_INT_FTYPE_INT_INT_INT,			pulp_v2, NULL)
+
   DIRECT_BUILTIN1(addNu_si3,		adduN,		RISCV_INT_FTYPE_INT_INT_INT,			pulp_v2, CheckBuiltin)
+  DIRECT_BUILTIN1(addNu_reg_si3,	adduN_r,	RISCV_INT_FTYPE_INT_INT_INT,			pulp_v2, NULL)
+
   DIRECT_BUILTIN1(subN_si3,		subN,		RISCV_INT_FTYPE_INT_INT_INT,			pulp_v2, CheckBuiltin)
+  DIRECT_BUILTIN1(subN_reg_si3,		subN_r,		RISCV_INT_FTYPE_INT_INT_INT,			pulp_v2, NULL)
+
   DIRECT_BUILTIN1(subNu_si3,		subuN,		RISCV_INT_FTYPE_INT_INT_INT,			pulp_v2, CheckBuiltin)
+  DIRECT_BUILTIN1(subNu_reg_si3,	subuN_r,	RISCV_INT_FTYPE_INT_INT_INT,			pulp_v2, NULL)
 
   DIRECT_BUILTIN1(addRN_si3,		addRN,		RISCV_INT_FTYPE_INT_INT_INT_INT,		pulp_v2, CheckBuiltin)
+  DIRECT_BUILTIN1(addRN_reg_si3,	addRN_r,	RISCV_INT_FTYPE_INT_INT_INT,			pulp_v2, NULL)
+
   DIRECT_BUILTIN1(addRNu_si3,		adduRN,		RISCV_INT_FTYPE_INT_INT_INT_INT,		pulp_v2, CheckBuiltin)
+  DIRECT_BUILTIN1(addRNu_reg_si3,	adduRN_r,	RISCV_INT_FTYPE_INT_INT_INT,			pulp_v2, NULL)
+
   DIRECT_BUILTIN1(subRN_si3,		subRN,		RISCV_INT_FTYPE_INT_INT_INT_INT,		pulp_v2, CheckBuiltin)
+  DIRECT_BUILTIN1(subRN_reg_si3,	subRN_r,	RISCV_INT_FTYPE_INT_INT_INT,			pulp_v2, NULL)
+
   DIRECT_BUILTIN1(subRNu_si3,		subuRN,		RISCV_INT_FTYPE_INT_INT_INT_INT,		pulp_v2, CheckBuiltin)
+  DIRECT_BUILTIN1(subRNu_reg_si3,	subuRN_r,	RISCV_INT_FTYPE_INT_INT_INT,			pulp_v2, NULL)
 
   DIRECT_BUILTIN1(vec_pack_v2hi, 	pack2, 		RISCV_V2HI_FTYPE_SHORT_SHORT,			pulp_v2, NULL)
   DIRECT_BUILTIN1(vec_pack_v4qi, 	pack4, 		RISCV_V4QI_FTYPE_CHAR_CHAR_CHAR_CHAR,		pulp_v2, NULL)
@@ -174,11 +188,27 @@ Currently these macros are used in 2 contexts:
   DIRECT_BUILTIN1(vec_pack_v4qi_lo,	pack4_hi,	RISCV_V4QI_FTYPE_CHAR_CHAR_V4QI,		pulp_v2, NULL)
   DIRECT_BUILTIN1(vec_permv4qi,		shuffle2b,	RISCV_V4QI_FTYPE_V4QI_V4QI_V4QI,		pulp_v2, NULL)
   DIRECT_BUILTIN1(vec_permv2hi,		shuffle2h,	RISCV_V2HI_FTYPE_V2HI_V2HI_V2HI,		pulp_v2, NULL)
+
+  DIRECT_BUILTIN1(bclrsi3,		bclr,		RISCV_INT_FTYPE_INT_INT,			pulp_v2, CheckBuiltin)
+  DIRECT_BUILTIN1(bclrsi3_reg,		bclr_r,		RISCV_INT_FTYPE_INT_INT,			pulp_v2, NULL)
+
+  DIRECT_BUILTIN1(bsetsi3,		bset,		RISCV_INT_FTYPE_INT_INT,			pulp_v2, CheckBuiltin)
+  DIRECT_BUILTIN1(bsetsi3_reg,		bset_r,		RISCV_INT_FTYPE_INT_INT,			pulp_v2, NULL)
+
   DIRECT_BUILTIN1(extvsi,		bextract,	RISCV_INT_FTYPE_INT_INT_INT,			pulp_v2, CheckBuiltin)
+  DIRECT_BUILTIN1(bextracts_reg_si3,	bextract_r,	RISCV_INT_FTYPE_INT_INT,			pulp_v2, NULL)
+
   DIRECT_BUILTIN1(extzvsi,		bextractu,	RISCV_INT_FTYPE_INT_INT_INT,			pulp_v2, CheckBuiltin)
+  DIRECT_BUILTIN1(bextractu_reg_si3,	bextractu_r,	RISCV_INT_FTYPE_INT_INT,			pulp_v2, NULL)
+
   DIRECT_BUILTIN1(invsipat1,		binsert, 	RISCV_INT_FTYPE_INT_INT_INT_INT_INT,		pulp_v2, CheckBuiltin)
+  DIRECT_BUILTIN1(binsert_reg_si3,	binsert_r, 	RISCV_INT_FTYPE_INT_INT_INT,			pulp_v2, NULL)
+
   DIRECT_BUILTIN1(clip_minmax,		clip,		RISCV_INT_FTYPE_INT_INT_INT,			pulp_v2, CheckBuiltin)
+  DIRECT_BUILTIN1(clip_minmax1_reg,	clip_r,		RISCV_INT_FTYPE_INT_INT,			pulp_v2, NULL)
+
   DIRECT_BUILTIN1(clipu_minmax,		clipu,		RISCV_INT_FTYPE_INT_INT_INT,			pulp_v2, CheckBuiltin)
+  DIRECT_BUILTIN1(clipu_minmax1_reg,	clipu_r,	RISCV_INT_FTYPE_INT_INT,			pulp_v2, NULL)
 
 
   DIRECT_BUILTIN1(load_evt_unit,       	event_unit_read, RISCV_INT_FTYPE_POINTER_INT,         		pulp_v2, CheckBuiltin)
