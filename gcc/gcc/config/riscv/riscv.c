@@ -4706,6 +4706,13 @@ riscv_builtin_avail_pulp_v2 (void)
 }
 
 static unsigned int
+riscv_builtin_avail_pulp_v2_new (void)
+{
+  if (TARGET_MASK_NEW_INSN && Pulp_Cpu>=PULP_V2) return 1;
+  return 0;
+}
+
+static unsigned int
 riscv_builtin_avail_pulp_v3 (void)
 {
   if (Pulp_Cpu>=PULP_V3) return 1;

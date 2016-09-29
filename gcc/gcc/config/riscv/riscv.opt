@@ -244,6 +244,10 @@ mnomulmacnormround
 Target Mask(MASK_NOMULMACNORMROUND)
 Disable 16x16 into 32 mul/mac  with norm and round
 
+mnewinsn
+Target Mask(MASK_NEW_INSN)
+Enable new bit unit and add/subNR instructions
+
 mnoshufflepack
 Target Mask(MASK_NOSHUFFLEPACK)
 Disable vector pack and shuffle support

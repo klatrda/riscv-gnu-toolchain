@@ -1851,7 +1851,7 @@
         )
    )
   ]
-  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOADDSUBNORMROUND)"
+  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOADDSUBNORMROUND && TARGET_MASK_NEW_INSN)"
   "p.add<norm_sign>Nr \t%0,%z2,%3"
 [(set_attr "type" "arith")
  (set_attr "mode" "SI")]
@@ -1927,7 +1927,7 @@
         )
    )
   ]
-  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOADDSUBNORMROUND)"
+  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOADDSUBNORMROUND && TARGET_MASK_NEW_INSN)"
   "p.add<norm_sign>RNr \t%0,%z2,%3"
 [(set_attr "type" "arith")
  (set_attr "mode" "SI")]
@@ -1969,7 +1969,7 @@
         )
    )
   ]
-  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOADDSUBNORMROUND)"
+  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOADDSUBNORMROUND && TARGET_MASK_NEW_INSN)"
   "p.sub<norm_sign>RNr \t%0,%z2,%3"
 [(set_attr "type" "arith")
  (set_attr "mode" "SI")]
@@ -2004,62 +2004,26 @@
  (set_attr "mode" "SI")]
 )
 
-(define_insn"clip_minmax1_reg"
+(define_insn"clip_minmax_reg"
   [(set (match_operand:SI 0 "register_operand" "=r")
         (smin:SI (smax:SI (match_operand:SI 1 "register_operand" "r")
 			  (neg:SI (plus:SI (match_operand:SI 2 "register_operand" "r") (const_int 1)))
 		 )
 		 (match_dup 2)))]
-  "(Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOCLIP"
+  "(Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOCLIP && TARGET_MASK_NEW_INSN"
   "p.clipr\\t%0,%1,%2"
 [(set_attr "type" "logical")
  (set_attr "mode" "SI")]
 )
 
 
-(define_insn"clip_maxmin1_reg"
+(define_insn"clip_maxmin_reg"
   [(set (match_operand:SI 0 "register_operand" "=r")
         (smax:SI (smin:SI (match_operand:SI 1 "register_operand" "r")
 			  (match_operand:SI 2 "register_operand" "r")
 		 )
 		 (neg:SI (plus:SI (match_dup 2) (const_int 1)))))]
-  "(Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOCLIP"
-  "p.clipr\\t%0,%1,%2"
-[(set_attr "type" "logical")
- (set_attr "mode" "SI")]
-)
-
-
-
-(define_insn "clip_maxmin_reg"
-  [(set (match_operand:SI 0 "register_operand" "=r")
-        (smax:SI (smin:SI (match_operand:SI 1 "register_operand" "r")
-                          (minus:SI (ashift:SI (const_int 1)
-					       (match_operand:SI 2 "register_operand" "r")
-				    )
-				    (const_int 1)
-			  )
-		 )
-		 (neg: SI (ashift:SI (const_int 1) (match_dup 2)))
-        )
-   )
-  ]
-  "(Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOCLIP"
-  "p.clipr\\t%0,%1,%2"
-[(set_attr "type" "logical")
- (set_attr "mode" "SI")]
-)
-
-(define_insn "clip_minmax_reg"
-  [(set (match_operand:SI 0 "register_operand" "=r")
-        (smin:SI (smax:SI (match_operand:SI 1 "register_operand" "r")
-		 	  (neg: SI (ashift:SI (const_int 1) (match_operand:SI 2 "register_operand" "r")))
-		 )
-                 (minus:SI (ashift:SI (const_int 1) (match_dup 2)) (const_int 1))
-        )
-   )
-  ]
-  "(Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOCLIP"
+  "(Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOCLIP && TARGET_MASK_NEW_INSN"
   "p.clipr\\t%0,%1,%2"
 [(set_attr "type" "logical")
  (set_attr "mode" "SI")]
@@ -2090,13 +2054,13 @@
 (define_insn "clipu_maxmin_reg"
   [(set (match_operand:SI 0 "register_operand" "=r")
         (smax:SI (smin:SI (match_operand:SI 1 "register_operand" "r")
-                          (minus:SI (ashift:SI (const_int 1) (match_operand:SI 2 "register_operand" "r")) (const_int 1))
+                          (match_operand:SI 2 "register_operand" "r")
 		 )
 		 (const_int 0)
         )
    )
   ]
-  "(Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOCLIP"
+  "(Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOCLIP && TARGET_MASK_NEW_INSN"
   "p.clipur\\t%0,%1,%2"
 [(set_attr "type" "logical")
  (set_attr "mode" "SI")]
@@ -2105,40 +2069,11 @@
 (define_insn "clipu_minmax_reg"
   [(set (match_operand:SI 0 "register_operand" "=r")
         (smin:SI (smax:SI (match_operand:SI 1 "register_operand" "r") (const_int 0))
-		 (minus:SI (ashift:SI (const_int 1) (match_operand:SI 2 "register_operand" "r")) (const_int 1))
-        )
-   )
-  ]
-  "(Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOCLIP"
-  "p.clipur\\t%0,%1,%2"
-[(set_attr "type" "logical")
- (set_attr "mode" "SI")]
-)
-
-
-(define_insn "clipu_maxmin1_reg"
-  [(set (match_operand:SI 0 "register_operand" "=r")
-        (smax:SI (smin:SI (match_operand:SI 1 "register_operand" "r")
-                          (match_operand:SI 2 "register_operand" "r")
-		 )
-		 (const_int 0)
-        )
-   )
-  ]
-  "(Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOCLIP"
-  "p.clipur\\t%0,%1,%2"
-[(set_attr "type" "logical")
- (set_attr "mode" "SI")]
-)
-
-(define_insn "clipu_minmax1_reg"
-  [(set (match_operand:SI 0 "register_operand" "=r")
-        (smin:SI (smax:SI (match_operand:SI 1 "register_operand" "r") (const_int 0))
 		 (match_operand:SI 2 "register_operand" "r")
         )
    )
   ]
-  "(Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOCLIP"
+  "(Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOCLIP && TARGET_MASK_NEW_INSN"
   "p.clipur\\t%0,%1,%2"
 [(set_attr "type" "logical")
  (set_attr "mode" "SI")]
@@ -2195,7 +2130,7 @@
 	)
    )
   ]
-  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOBITOP)"
+  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOBITOP && TARGET_MASK_NEW_INSN)"
   "p.bclrr\\t%0,%1,%2 # Bit clear reg"
 [(set_attr "type" "logical")
  (set_attr "mode" "SI")]
@@ -2243,7 +2178,7 @@
 	)
    )
   ]
-  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOBITOP)"
+  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOBITOP && TARGET_MASK_NEW_INSN)"
   "p.bsetr\\t%0,%1,%2 # Bit set reg"
 [(set_attr "type" "logical")
  (set_attr "mode" "SI")]
@@ -2273,7 +2208,7 @@
 	)
    )
   ]
-  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOBITOP)"
+  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOBITOP && TARGET_MASK_NEW_INSN)"
   "p.extractr \t%0,%1,%2 # Bit extract signed, arg reg"
   [(set_attr "type" "logical")
    (set_attr "length" "1")]
@@ -2302,7 +2237,7 @@
 	)
    )
   ]
-  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOBITOP)"
+  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOBITOP && TARGET_MASK_NEW_INSN)"
   "p.extractur \t%0,%1,%2 # Bit extract unsigned, reg arg"
 [(set_attr "type" "logical")
  (set_attr "mode" "SI")]
@@ -2398,7 +2333,7 @@
 		    (match_operand:SI 3 "register_operand" "r")] UNSPEC_BINS_REG)
    )
   ]
-  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOBITOP)"
+  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOBITOP && TARGET_MASK_NEW_INSN)"
 {
   	if (operands[2] == CONST0_RTX (GET_MODE (operands[2])))
   		return "p.insertr\t%0,x0,%3";

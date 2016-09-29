@@ -903,14 +903,29 @@ const struct riscv_opcode riscv_builtin_opcodes[] =
 
 /* clip and bit manipulation */
 
+
 {"p.clip",   		"Xpulpv2", "d,s,bi", 	MATCH_CLIP,   				MASK_PALU1,  	match_opcode,	WR_xd|RD_xs1},
+{"p.clipi",   		"Xpulpv2", "d,s,bi", 	MATCH_CLIP,   				MASK_PALU1,  	match_opcode,	WR_xd|RD_xs1},
+{"p.clipr",   		"Xpulpv2", "d,s,t", 	MATCH_CLIPR,   				MASK_PALU,  	match_opcode,	WR_xd|RD_xs1},
 {"p.clipu",   		"Xpulpv2", "d,s,bi", 	MATCH_CLIPU,   				MASK_PALU1,  	match_opcode,	WR_xd|RD_xs1},
+{"p.clipui",   		"Xpulpv2", "d,s,bi", 	MATCH_CLIPU,   				MASK_PALU1,  	match_opcode,	WR_xd|RD_xs1},
+{"p.clipur",   		"Xpulpv2", "d,s,t", 	MATCH_CLIPUR,  				MASK_PALU,  	match_opcode,	WR_xd|RD_xs1},
 
 {"p.extract",  		"Xpulpv2", "d,s,b5,bi",	MATCH_EXTRACT, 				MASK_PALU2,  	match_opcode,	WR_xd|RD_xs1},
+{"p.extracti", 		"Xpulpv2", "d,s,b5,bi",	MATCH_EXTRACT, 				MASK_PALU2,  	match_opcode,	WR_xd|RD_xs1},
+{"p.extractr", 		"Xpulpv2", "d,s,t",	MATCH_EXTRACTR,				MASK_PALU,  	match_opcode,	WR_xd|RD_xs1},
 {"p.extractu", 		"Xpulpv2", "d,s,b5,bi",	MATCH_EXTRACTU, 			MASK_PALU2,  	match_opcode,	WR_xd|RD_xs1},
+{"p.extractui", 	"Xpulpv2", "d,s,b5,bi",	MATCH_EXTRACTU, 			MASK_PALU2,  	match_opcode,	WR_xd|RD_xs1},
+{"p.extractur", 	"Xpulpv2", "d,s,t",	MATCH_EXTRACTUR, 			MASK_PALU,  	match_opcode,	WR_xd|RD_xs1},
 {"p.insert",  		"Xpulpv2", "d,s,b5,bi",	MATCH_INSERT, 				MASK_PALU2,  	match_opcode,	WR_xd|RD_xs1},
+{"p.inserti",  		"Xpulpv2", "d,s,b5,bi",	MATCH_INSERT, 				MASK_PALU2,  	match_opcode,	WR_xd|RD_xs1},
+{"p.insertr",  		"Xpulpv2", "d,s,t",	MATCH_INSERTR, 				MASK_PALU,  	match_opcode,	WR_xd|RD_xs1},
 {"p.bset",  		"Xpulpv2", "d,s,b5,bi",	MATCH_BSET, 				MASK_PALU2,  	match_opcode,	WR_xd|RD_xs1},
+{"p.bseti",  		"Xpulpv2", "d,s,b5,bi",	MATCH_BSET, 				MASK_PALU2,  	match_opcode,	WR_xd|RD_xs1},
+{"p.bsetr",  		"Xpulpv2", "d,s,t",	MATCH_BSETR, 				MASK_PALU,  	match_opcode,	WR_xd|RD_xs1},
 {"p.bclr",  		"Xpulpv2", "d,s,b5,bi",	MATCH_BCLR, 				MASK_PALU2,  	match_opcode,	WR_xd|RD_xs1},
+{"p.bclri",  		"Xpulpv2", "d,s,b5,bi",	MATCH_BCLR, 				MASK_PALU2,  	match_opcode,	WR_xd|RD_xs1},
+{"p.bclrr",  		"Xpulpv2", "d,s,t",	MATCH_BCLRR, 				MASK_PALU,  	match_opcode,	WR_xd|RD_xs1},
 
 /* hardware loops */
 
@@ -978,15 +993,30 @@ const struct riscv_opcode riscv_builtin_opcodes[] =
 /*  Add/Sub with norm and rounding */
 
 {"p.addn",		"Xpulpv2", "d,s,t,b5", 	MATCH_ADDN, 				MASK_MACMULNR, 	match_opcode,  	WR_xd|RD_xs1|RD_xs2 },
+{"p.addni",		"Xpulpv2", "d,s,t,b5", 	MATCH_ADDN, 				MASK_MACMULNR, 	match_opcode,  	WR_xd|RD_xs1|RD_xs2 },
+{"p.addnr",		"Xpulpv2", "d,s,t", 	MATCH_ADDNR, 				MASK_PALU, 	match_opcode,  	WR_xd|RD_xs1|RD_xs2 },
 {"p.addun",		"Xpulpv2", "d,s,t,b5", 	MATCH_ADDUN, 				MASK_MACMULNR, 	match_opcode,  	WR_xd|RD_xs1|RD_xs2 },
+{"p.adduni",		"Xpulpv2", "d,s,t,b5", 	MATCH_ADDUN, 				MASK_MACMULNR, 	match_opcode,  	WR_xd|RD_xs1|RD_xs2 },
+{"p.addunr",		"Xpulpv2", "d,s,t", 	MATCH_ADDUNR, 				MASK_PALU, 	match_opcode,  	WR_xd|RD_xs1|RD_xs2 },
 {"p.addrn",		"Xpulpv2", "d,s,t,b5", 	MATCH_ADDRN, 				MASK_MACMULNR, 	match_opcode,  	WR_xd|RD_xs1|RD_xs2 },
+{"p.addrni",		"Xpulpv2", "d,s,t,b5", 	MATCH_ADDRN, 				MASK_MACMULNR, 	match_opcode,  	WR_xd|RD_xs1|RD_xs2 },
+{"p.addrnr",		"Xpulpv2", "d,s,t", 	MATCH_ADDRNR, 				MASK_PALU, 	match_opcode,  	WR_xd|RD_xs1|RD_xs2 },
 {"p.addurn",		"Xpulpv2", "d,s,t,b5", 	MATCH_ADDURN,				MASK_MACMULNR, 	match_opcode,  	WR_xd|RD_xs1|RD_xs2 },
+{"p.addurni",		"Xpulpv2", "d,s,t,b5", 	MATCH_ADDURN,				MASK_MACMULNR, 	match_opcode,  	WR_xd|RD_xs1|RD_xs2 },
+{"p.addurnr",		"Xpulpv2", "d,s,t", 	MATCH_ADDURNR,				MASK_PALU, 	match_opcode,  	WR_xd|RD_xs1|RD_xs2 },
 
 {"p.subn",		"Xpulpv2", "d,s,t,b5", 	MATCH_SUBN, 				MASK_MACMULNR, 	match_opcode,  	WR_xd|RD_xs1|RD_xs2 },
+{"p.subni",		"Xpulpv2", "d,s,t,b5", 	MATCH_SUBN, 				MASK_MACMULNR, 	match_opcode,  	WR_xd|RD_xs1|RD_xs2 },
+{"p.subnr",		"Xpulpv2", "d,s,t", 	MATCH_SUBNR, 				MASK_PALU, 	match_opcode,  	WR_xd|RD_xs1|RD_xs2 },
 {"p.subun",		"Xpulpv2", "d,s,t,b5", 	MATCH_SUBUN, 				MASK_MACMULNR, 	match_opcode,  	WR_xd|RD_xs1|RD_xs2 },
+{"p.subuni",		"Xpulpv2", "d,s,t,b5", 	MATCH_SUBUN, 				MASK_MACMULNR, 	match_opcode,  	WR_xd|RD_xs1|RD_xs2 },
+{"p.subunr",		"Xpulpv2", "d,s,t", 	MATCH_SUBUNR, 				MASK_PALU, 	match_opcode,  	WR_xd|RD_xs1|RD_xs2 },
 {"p.subrn",		"Xpulpv2", "d,s,t,b5", 	MATCH_SUBRN, 				MASK_MACMULNR, 	match_opcode,  	WR_xd|RD_xs1|RD_xs2 },
+{"p.subrni",		"Xpulpv2", "d,s,t,b5", 	MATCH_SUBRN, 				MASK_MACMULNR, 	match_opcode,  	WR_xd|RD_xs1|RD_xs2 },
+{"p.subrnr",		"Xpulpv2", "d,s,t", 	MATCH_SUBRNR, 				MASK_PALU, 	match_opcode,  	WR_xd|RD_xs1|RD_xs2 },
 {"p.suburn",		"Xpulpv2", "d,s,t,b5", 	MATCH_SUBURN,				MASK_MACMULNR, 	match_opcode,  	WR_xd|RD_xs1|RD_xs2 },
-
+{"p.suburni",		"Xpulpv2", "d,s,t,b5", 	MATCH_SUBURN,				MASK_MACMULNR, 	match_opcode,  	WR_xd|RD_xs1|RD_xs2 },
+{"p.suburnr",		"Xpulpv2", "d,s,t", 	MATCH_SUBURNR,				MASK_PALU, 	match_opcode,  	WR_xd|RD_xs1|RD_xs2 },
 
 /* Vector Operations */
 
