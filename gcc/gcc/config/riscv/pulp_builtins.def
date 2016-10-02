@@ -214,12 +214,16 @@ Currently these macros are used in 2 contexts:
   DIRECT_BUILTIN1(load_evt_unit,       	event_unit_read, RISCV_INT_FTYPE_POINTER_INT,         		pulp_v2, CheckBuiltin)
   DIRECT_BUILTIN1(OffsetedRead,		OffsetedRead,	RISCV_INT_FTYPE_POINTER_INT,			pulp_v2, NULL)
   DIRECT_BUILTIN1(OffsetedReadOMP,	OffsetedReadOMP,RISCV_INT_FTYPE_POINTER_INT,			pulp_v2, NULL)
+  DIRECT_NO_TARGET_BUILTIN1(OffsetedWrite,OffsetedWrite,RISCV_VOID_FTYPE_INT_POINTER_INT,			pulp_v2, NULL)
 
   DIRECT_BUILTIN1(OffsetedReadNonVol,	CoreCount,	RISCV_INT_FTYPE_VOID,				pulp_vall, CheckBuiltin)
   DIRECT_BUILTIN1(read_spr,		CoreId,		RISCV_INT_FTYPE_VOID,				pulp_vall, CheckBuiltin)
   DIRECT_BUILTIN1(read_spr,		ClusterId,	RISCV_INT_FTYPE_VOID,				pulp_vall, CheckBuiltin)
   DIRECT_BUILTIN1(read_spr,		IsFc,		RISCV_INT_FTYPE_VOID,				pulp_vall, CheckBuiltin)
   DIRECT_BUILTIN1(read_spr,		HasFc,		RISCV_INT_FTYPE_VOID,				pulp_vall, CheckBuiltin)
+
+  DIRECT_BUILTIN1(readsi,		read_base_off,	RISCV_INT_FTYPE_INT_INT,			pulp_vall, NULL)
+  DIRECT_BUILTIN1(readsivol,		read_base_off_v,RISCV_INT_FTYPE_INT_INT,			pulp_vall, NULL)
 
 
   DIRECT_BUILTIN1(read_spr_vol,		spr_read_vol,	RISCV_INT_FTYPE_INT,				pulp_vall, CheckBuiltin)
@@ -228,6 +232,9 @@ Currently these macros are used in 2 contexts:
   DIRECT_NO_TARGET_BUILTIN1(write_spr,	spr_write,	RISCV_VOID_FTYPE_INT_INT, 			pulp_vall, CheckBuiltin)
   DIRECT_NO_TARGET_BUILTIN1(spr_bit_set,spr_bit_set,	RISCV_VOID_FTYPE_INT_INT, 			pulp_vall, CheckBuiltin)
   DIRECT_NO_TARGET_BUILTIN1(spr_bit_clr,spr_bit_clr,	RISCV_VOID_FTYPE_INT_INT, 			pulp_vall, CheckBuiltin)
+
+  DIRECT_NO_TARGET_BUILTIN1(writesi, 	write_base_off,	RISCV_VOID_FTYPE_INT_INT_INT, 			pulp_vall, NULL)
+  DIRECT_NO_TARGET_BUILTIN1(writesivol, write_base_off_v,RISCV_VOID_FTYPE_INT_INT_INT, 			pulp_vall, NULL)
 
   DIRECT_NO_TARGET_BUILTIN1(pulp_omp_barrier, 		pulp_GOMP_barrier,		RISCV_VOID_FTYPE_VOID,	pulp_v2, NULL)
   DIRECT_NO_TARGET_BUILTIN1(pulp_omp_critical_start, 	pulp_GOMP_critical_start,	RISCV_VOID_FTYPE_VOID,	pulp_v2, NULL)

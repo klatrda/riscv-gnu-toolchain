@@ -65,6 +65,7 @@
   UNSPEC_READ_EVU
   UNSPEC_OFFSETED_READ
   UNSPEC_OFFSETED_READ_OMP
+  UNSPEC_OFFSETED_WRITE
   UNSPEC_OMP_PULP_BARRIER
   UNSPEC_OMP_PULP_CRITICAL_START
   UNSPEC_OMP_PULP_CRITICAL_END
@@ -3147,9 +3148,9 @@
 )
 
 (define_insn "writesi"
-  [(unspec_volatile [(match_operand:SI 0 "register_operand" "r,r")
-		     (match_operand:SI 1 "register_operand" "r,r")
-		     (match_operand:SI 2 "nonmemory_operand" "r,i")] UNSPEC_WRITESI)]
+  [(unspec [(match_operand:SI 0 "register_operand" "r,r")
+	    (match_operand:SI 1 "register_operand" "r,r")
+	    (match_operand:SI 2 "nonmemory_operand" "r,i")] UNSPEC_WRITESI)]
  "(Pulp_Cpu>=PULP_V2)"
   "@
    p.sw \t%0,%2(%1)\t# Write non volatile
@@ -3159,9 +3160,9 @@
 )
 
 (define_insn "readsivol"
-  [(unspec_volatile [(match_operand:SI 0 "register_operand" "r,r")
-		     (match_operand:SI 1 "register_operand" "r,r")
-		     (match_operand:SI 2 "nonmemory_operand" "r,i")] UNSPEC_READSI_VOL)]
+  [(unspec_volatile:SI [(match_operand:SI 0 "register_operand" "=r,r")
+			(match_operand:SI 1 "register_operand" "r,r")
+		        (match_operand:SI 2 "nonmemory_operand" "r,i")] UNSPEC_READSI_VOL)]
  "(Pulp_Cpu>=PULP_V2)"
   "@
    p.lw \t%0,%2(%1)\t# Read volatile
@@ -3171,9 +3172,9 @@
 )
 
 (define_insn "readsi"
-  [(unspec_volatile [(match_operand:SI 0 "register_operand" "r,r")
-		     (match_operand:SI 1 "register_operand" "r,r")
-		     (match_operand:SI 2 "nonmemory_operand" "r,i")] UNSPEC_READSI)]
+  [(unspec:SI [(match_operand:SI 0 "register_operand" "=r,r")
+	       (match_operand:SI 1 "register_operand" "r,r")
+	       (match_operand:SI 2 "nonmemory_operand" "r,i")] UNSPEC_READSI)]
  "(Pulp_Cpu>=PULP_V2)"
   "@
    p.lw \t%0,%2(%1)\t# Read non volatile
@@ -3209,6 +3210,18 @@
   ]
   "(Pulp_Cpu>=PULP_V2)"
   "lw \t%0,%2(%1)\t# Volatile Load offseted"
+)
+
+(define_insn "OffsetedWrite"
+  [(unspec_volatile [(match_operand:SI 0 "reg_or_0_operand" "rJ,rJ")
+		     (match_operand:SI 1 "register_operand" "r,r")
+		     (match_operand:SI 2 "nonmemory_operand" "r,i")] UNSPEC_OFFSETED_WRITE)]
+ "(Pulp_Cpu>=PULP_V2)"
+  "@
+   p.sw \t%z0,%2(%1)\t# Offseted Write volatile
+   p.sw \t%z0,%2(%1)\t# Offseted Write volatile"
+  [(set_attr "type" "store,store")
+   (set_attr "mode" "SI,SI")]
 )
 
 (define_insn "OffsetedReadOMP"
