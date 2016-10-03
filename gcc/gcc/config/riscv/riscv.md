@@ -3883,11 +3883,11 @@
   [(set (match_operand:V4QI 0 "register_operand" "=r")
 	(vec_merge:V4QI
 		(vec_concat:V4QI
-			(const_vector:V2QI [(const_int 0) (const_int 0)])
 			(vec_concat:V2QI
 				(match_operand:QI 1 "register_operand" "r")
 				(match_operand:QI 2 "register_operand" "r")
 			)
+			(const_vector:V2QI [(const_int 0) (const_int 0)])
 		)
           	(match_operand:V4QI 3 "register_operand" "0")
 		(const_int 3)
@@ -3895,7 +3895,7 @@
    )
   ]
   "((Pulp_Cpu>=PULP_V2) && !(TARGET_MASK_NOVECT||TARGET_MASK_NOSHUFFLEPACK))"
-  "pv.packlo.b \t%0,%1,%2 \t# Vector pack of 2 bytes, low part"
+  "pv.packlo.b \t%0,%2,%1 \t# Vector pack of 2 bytes, low part"
 [(set_attr "type" "move")
  (set_attr "mode" "SI")]
 )
@@ -3904,11 +3904,11 @@
   [(set (match_operand:V4QI 0 "register_operand" "=r")
 	(vec_merge:V4QI
 		(vec_concat:V4QI
-			(const_vector:V2QI [(const_int 0) (const_int 0)])
 			(vec_concat:V2QI
 				(match_operand:QI 1 "register_operand" "r")
 				(match_operand:QI 2 "register_operand" "r")
 			)
+			(const_vector:V2QI [(const_int 0) (const_int 0)])
 		)
 	  	(const_vector:V4QI [(const_int 0) (const_int 0) (const_int 0) (const_int 0)])
 		(const_int 3)
@@ -3916,7 +3916,7 @@
    )
   ]
   "((Pulp_Cpu>=PULP_V2) && !(TARGET_MASK_NOVECT||TARGET_MASK_NOSHUFFLEPACK))"
-  "pv.packlo.b \t%0,%1,%2 \t# Vector pack of 2 bytes (first), low part"
+  "pv.packlo.b \t%0,%2,%1 \t# Vector pack of 2 bytes (first), low part"
 [(set_attr "type" "move")
  (set_attr "mode" "SI")]
 )
@@ -3926,19 +3926,19 @@
   [(set	(match_operand:V4QI 0 "register_operand" "=r")
 	(vec_merge:V4QI
 		(vec_concat:V4QI
+			(const_vector:V2QI [(const_int 0) (const_int 0)])
 			(vec_concat:V2QI
 				(match_operand:QI 1 "register_operand" "r")
 				(match_operand:QI 2 "register_operand" "r")
 			)
-			(const_vector:V2QI [(const_int 0) (const_int 0)])
 		)
           	(match_operand:V4QI 3 "register_operand" "0")
-		(const_int 6)
+		(const_int 12)
 	)
    )
   ]
   "((Pulp_Cpu>=PULP_V2) && !(TARGET_MASK_NOVECT||TARGET_MASK_NOSHUFFLEPACK))"
-  "pv.packhi.b \t%0,%1,%2 \t# Vector pack of 2 bytes, high part"
+  "pv.packhi.b \t%0,%2,%1 \t# Vector pack of 2 bytes, high part"
 [(set_attr "type" "move")
  (set_attr "mode" "SI")]
 )
@@ -3947,19 +3947,19 @@
   [(set	(match_operand:V4QI 0 "register_operand" "=r")
 	(vec_merge:V4QI
 		(vec_concat:V4QI
+			(const_vector:V2QI [(const_int 0) (const_int 0)])
 			(vec_concat:V2QI
 				(match_operand:QI 1 "register_operand" "r")
 				(match_operand:QI 2 "register_operand" "r")
 			)
-			(const_vector:V2QI [(const_int 0) (const_int 0)])
 		)
 	  	(const_vector:V4QI [(const_int 0) (const_int 0) (const_int 0) (const_int 0)])
-		(const_int 6)
+		(const_int 12)
 	)
    )
   ]
   "((Pulp_Cpu>=PULP_V2) && !(TARGET_MASK_NOVECT||TARGET_MASK_NOSHUFFLEPACK))"
-  "pv.packhi.b \t%0,%1,%2 \t# Vector pack of 2 bytes (first), high part"
+  "pv.packhi.b \t%0,%2,%1 \t# Vector pack of 2 bytes (first), high part"
 [(set_attr "type" "move")
  (set_attr "mode" "SI")]
 )
