@@ -4977,12 +4977,26 @@ static int CheckBuiltin(int Code, int BuiltinIndex, struct ExtraBuiltinImmArg *E
 			}
 			Diag = "__builtin_pulp_spr_write(Spr, Value) expects Spr to be immediate and in [0..4091]";
 			break;
+		case CODE_FOR_read_then_write_spr:
+			if (Op[0] && (GET_CODE(Op[0]) == CONST_INT)) {
+				unsigned int Reg = UINTVAL(Op[0]);
+				if (Reg <= 4091) return 1;
+			}
+			Diag = "__builtin_pulp_read_then_spr_write(Spr, Value) expects Spr to be immediate and in [0..4091]";
+			break;
 		case CODE_FOR_spr_bit_set:
 			if (Op[0] && (GET_CODE(Op[0]) == CONST_INT)) {
 				unsigned int Reg = UINTVAL(Op[0]);
 				if (Reg <= 4091) return 1;
 			}
 			Diag = "__builtin_pulp_spr_bit_set(Spr, Value) expects Spr to be immediate and in [0..4091]";
+			break;
+		case CODE_FOR_read_then_spr_bit_set:
+			if (Op[0] && (GET_CODE(Op[0]) == CONST_INT)) {
+				unsigned int Reg = UINTVAL(Op[0]);
+				if (Reg <= 4091) return 1;
+			}
+			Diag = "__builtin_pulp_read_then_spr_bit_set(Spr, Value) expects Spr to be immediate and in [0..4091]";
 			break;
 		case CODE_FOR_spr_bit_clr:
 			if (Op[0] && (GET_CODE(Op[0]) == CONST_INT)) {
@@ -4991,7 +5005,13 @@ static int CheckBuiltin(int Code, int BuiltinIndex, struct ExtraBuiltinImmArg *E
 			}
 			Diag = "__builtin_pulp_spr_bit_clr(Spr, Value) expects Spr to be immediate and in [0..4091]";
 			break;
-
+		case CODE_FOR_read_then_spr_bit_clr:
+			if (Op[0] && (GET_CODE(Op[0]) == CONST_INT)) {
+				unsigned int Reg = UINTVAL(Op[0]);
+				if (Reg <= 4091) return 1;
+			}
+			Diag = "__builtin_pulp_read_then_spr_bit_clr(Spr, Value) expects Spr to be immediate and in [0..4091]";
+			break;
 		/* Internal error no handler for this builtin code */
 		default:
 			// gcc_unreachable ();

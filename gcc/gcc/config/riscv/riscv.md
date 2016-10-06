@@ -3072,6 +3072,17 @@
   csrrwi \tx0,%0,%1\t# SPR write uimm5"
 )
 
+(define_insn "read_then_write_spr"
+  [(set (match_operand:SI 0 "register_operand" "=r,r")
+	(unspec_volatile [(match_operand:SI 1 "immediate_operand" "L,L") (match_operand:SI 2 "nonmemory_operand" "r,K")] UNSPEC_SPR_WRITE)
+   )
+  ]
+ "(Pulp_Cpu>=PULP_V2)"
+ "@
+  csrrw \t%0,%1,%2\t# SPR read then write
+  csrrwi \t%0,%1,%2\t# SPR read then write uimm5"
+)
+
 (define_insn "spr_bit_set"
   [(unspec_volatile [(match_operand:SI 0 "immediate_operand" "L,L") (match_operand:SI 1 "nonmemory_operand" "r,K")] UNSPEC_SPR_BIT_SET)
   ]
@@ -3081,6 +3092,17 @@
   csrrsi \tx0,%0,%1\t# SPR bit set uimm5"
 )
  
+(define_insn "read_then_spr_bit_set"
+  [(set (match_operand:SI 0 "register_operand" "=r,r")
+	(unspec_volatile [(match_operand:SI 1 "immediate_operand" "L,L") (match_operand:SI 2 "nonmemory_operand" "r,K")] UNSPEC_SPR_BIT_SET)
+   )
+  ]
+ "(Pulp_Cpu>=PULP_V2)"
+  "@
+  csrrs \t%0,%1,%2\t# Read then SPR bit set
+  csrrsi \t%0,%1,%2\t# Read then SPR bit set uimm5"
+)
+
 (define_insn "spr_bit_clr"
   [(unspec_volatile [(match_operand:SI 0 "immediate_operand" "L,L") (match_operand:SI 1 "nonmemory_operand" "r,K")] UNSPEC_SPR_BIT_CLR)
   ]
@@ -3090,6 +3112,16 @@
   csrrci \tx0,%0,%1\t# SPR bit clr uimm5"
 )
 
+(define_insn "read_then_spr_bit_clr"
+  [(set (match_operand:SI 0 "register_operand" "=r,r")
+	(unspec_volatile [(match_operand:SI 1 "immediate_operand" "L,L") (match_operand:SI 2 "nonmemory_operand" "r,K")] UNSPEC_SPR_BIT_CLR)
+   )
+  ]
+ "(Pulp_Cpu>=PULP_V2)"
+  "@
+  csrrc \t%0,%1,%2\t# Read then SPR bit clr
+  csrrci \t%0,%1,%2\t# Read then SPR bit clr uimm5"
+)
 
 
 ;; Open MP support
