@@ -1852,7 +1852,7 @@
         )
    )
   ]
-  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOADDSUBNORMROUND && TARGET_MASK_NEW_INSN)"
+  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOADDSUBNORMROUND)"
   "p.add<norm_sign>Nr \t%0,%z2,%3"
 [(set_attr "type" "arith")
  (set_attr "mode" "SI")]
@@ -1928,7 +1928,7 @@
         )
    )
   ]
-  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOADDSUBNORMROUND && TARGET_MASK_NEW_INSN)"
+  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOADDSUBNORMROUND)"
   "p.add<norm_sign>RNr \t%0,%z2,%3"
 [(set_attr "type" "arith")
  (set_attr "mode" "SI")]
@@ -1970,7 +1970,7 @@
         )
    )
   ]
-  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOADDSUBNORMROUND && TARGET_MASK_NEW_INSN)"
+  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOADDSUBNORMROUND)"
   "p.sub<norm_sign>RNr \t%0,%z2,%3"
 [(set_attr "type" "arith")
  (set_attr "mode" "SI")]
@@ -2011,7 +2011,7 @@
 			  (neg:SI (plus:SI (match_operand:SI 2 "register_operand" "r") (const_int 1)))
 		 )
 		 (match_dup 2)))]
-  "(Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOCLIP && TARGET_MASK_NEW_INSN"
+  "(Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOCLIP"
   "p.clipr\\t%0,%1,%2"
 [(set_attr "type" "logical")
  (set_attr "mode" "SI")]
@@ -2024,7 +2024,7 @@
 			  (match_operand:SI 2 "register_operand" "r")
 		 )
 		 (neg:SI (plus:SI (match_dup 2) (const_int 1)))))]
-  "(Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOCLIP && TARGET_MASK_NEW_INSN"
+  "(Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOCLIP"
   "p.clipr\\t%0,%1,%2"
 [(set_attr "type" "logical")
  (set_attr "mode" "SI")]
@@ -2061,7 +2061,7 @@
         )
    )
   ]
-  "(Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOCLIP && TARGET_MASK_NEW_INSN"
+  "(Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOCLIP"
   "p.clipur\\t%0,%1,%2"
 [(set_attr "type" "logical")
  (set_attr "mode" "SI")]
@@ -2074,7 +2074,7 @@
         )
    )
   ]
-  "(Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOCLIP && TARGET_MASK_NEW_INSN"
+  "(Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOCLIP"
   "p.clipur\\t%0,%1,%2"
 [(set_attr "type" "logical")
  (set_attr "mode" "SI")]
@@ -2121,7 +2121,10 @@
 		(not:SI (ashift:SI
 				(minus:SI
 					(ashift:SI (const_int 1)
-					   	   (and:SI (lshiftrt:SI (match_operand:SI 2 "register_operand" "r") (const_int 5)) (const_int 31))
+						   (plus:SI
+					   	   	(and:SI (lshiftrt:SI (match_operand:SI 2 "register_operand" "r") (const_int 5)) (const_int 31))
+							(const_int 1)
+						   )
 					)
 					(const_int 1)
 				)
@@ -2131,7 +2134,7 @@
 	)
    )
   ]
-  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOBITOP && TARGET_MASK_NEW_INSN)"
+  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOBITOP)"
   "p.bclrr\\t%0,%1,%2 # Bit clear reg"
 [(set_attr "type" "logical")
  (set_attr "mode" "SI")]
@@ -2170,7 +2173,10 @@
 		(ashift:SI
 			(minus:SI
 				(ashift:SI (const_int 1)
-				   	   (and:SI (lshiftrt:SI (match_operand:SI 2 "register_operand" "r") (const_int 5)) (const_int 31))
+					   (plus:SI
+				   	   	(and:SI (lshiftrt:SI (match_operand:SI 2 "register_operand" "r") (const_int 5)) (const_int 31))
+						(const_int 1)
+					   )
 				)
 				(const_int 1)
 			)
@@ -2179,7 +2185,7 @@
 	)
    )
   ]
-  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOBITOP && TARGET_MASK_NEW_INSN)"
+  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOBITOP)"
   "p.bsetr\\t%0,%1,%2 # Bit set reg"
 [(set_attr "type" "logical")
  (set_attr "mode" "SI")]
@@ -2204,12 +2210,13 @@
 (define_insn "bextracts_reg_si3"
   [(set (match_operand:SI 0 "register_operand" "=r")
         (sign_extract:SI (match_operand:SI 1 "register_operand" "r")
-			 (and:SI (lshiftrt:SI (match_operand:SI 2 "register_operand" "r") (const_int 5)) (const_int 31))
+			 (plus:SI (and:SI (lshiftrt:SI (match_operand:SI 2 "register_operand" "r") (const_int 5)) (const_int 31))
+				  (const_int 1))
 			 (and:SI (match_dup 2) (const_int 31))
 	)
    )
   ]
-  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOBITOP && TARGET_MASK_NEW_INSN)"
+  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOBITOP)"
   "p.extractr \t%0,%1,%2 # Bit extract signed, arg reg"
   [(set_attr "type" "logical")
    (set_attr "length" "1")]
@@ -2233,12 +2240,13 @@
 (define_insn "bextractu_reg_si3"
   [(set (match_operand:SI 0 "register_operand" "=r")
         (zero_extract:SI (match_operand:SI 1 "register_operand" "r")
-			 (and:SI (lshiftrt:SI (match_operand:SI 2 "register_operand" "r") (const_int 5)) (const_int 31))
+			 (plus:SI (and:SI (lshiftrt:SI (match_operand:SI 2 "register_operand" "r") (const_int 5)) (const_int 31))
+				  (const_int 1))
 			 (and:SI (match_dup 2) (const_int 31))
 	)
    )
   ]
-  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOBITOP && TARGET_MASK_NEW_INSN)"
+  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOBITOP)"
   "p.extractur \t%0,%1,%2 # Bit extract unsigned, reg arg"
 [(set_attr "type" "logical")
  (set_attr "mode" "SI")]
@@ -2334,7 +2342,7 @@
 		    (match_operand:SI 3 "register_operand" "r")] UNSPEC_BINS_REG)
    )
   ]
-  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOBITOP && TARGET_MASK_NEW_INSN)"
+  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOBITOP)"
 {
   	if (operands[2] == CONST0_RTX (GET_MODE (operands[2])))
   		return "p.insertr\t%0,x0,%3";
@@ -3168,33 +3176,34 @@
 ;; )
 
 (define_insn "writesivol"
-  [(unspec_volatile [(match_operand:SI 0 "register_operand" "r,r")
+  [(unspec_volatile [(match_operand:SI 0 "register_operand" "rJ,rJ")
 		     (match_operand:SI 1 "register_operand" "r,r")
 		     (match_operand:SI 2 "nonmemory_operand" "r,i")] UNSPEC_WRITESI_VOL)]
  "(Pulp_Cpu>=PULP_V2)"
   "@
-   p.sw \t%0,%2(%1)\t# Write volatile
-   p.sw \t%0,%2(%1)\t# Write volatile"
+   p.sw \t%z0,%2(%1)\t# Write volatile
+   p.sw \t%z0,%2(%1)\t# Write volatile"
   [(set_attr "type" "store,store")
    (set_attr "mode" "SI,SI")]
 )
 
 (define_insn "writesi"
-  [(unspec [(match_operand:SI 0 "register_operand" "r,r")
+  [(unspec [(match_operand:SI 0 "register_operand" "rJ,rJ")
 	    (match_operand:SI 1 "register_operand" "r,r")
 	    (match_operand:SI 2 "nonmemory_operand" "r,i")] UNSPEC_WRITESI)]
  "(Pulp_Cpu>=PULP_V2)"
   "@
-   p.sw \t%0,%2(%1)\t# Write non volatile
-   p.sw \t%0,%2(%1)\t# Write non volatile"
+   p.sw \t%z0,%2(%1)\t# Write non volatile
+   p.sw \t%z0,%2(%1)\t# Write non volatile"
   [(set_attr "type" "store,store")
    (set_attr "mode" "SI,SI")]
 )
 
 (define_insn "readsivol"
-  [(unspec_volatile:SI [(match_operand:SI 0 "register_operand" "=r,r")
-			(match_operand:SI 1 "register_operand" "r,r")
-		        (match_operand:SI 2 "nonmemory_operand" "r,i")] UNSPEC_READSI_VOL)]
+  [(set (match_operand:SI 0 "register_operand" "=r,r")
+        (unspec_volatile:SI [(match_operand:SI 1 "register_operand" "r,r") (match_operand:SI 2 "immediate_operand" "r,i")] UNSPEC_READSI_VOL)
+   )
+  ]
  "(Pulp_Cpu>=PULP_V2)"
   "@
    p.lw \t%0,%2(%1)\t# Read volatile
@@ -3203,17 +3212,18 @@
    (set_attr "mode" "SI,SI")]
 )
 
-(define_insn "readsi"
-  [(unspec:SI [(match_operand:SI 0 "register_operand" "=r,r")
-	       (match_operand:SI 1 "register_operand" "r,r")
-	       (match_operand:SI 2 "nonmemory_operand" "r,i")] UNSPEC_READSI)]
- "(Pulp_Cpu>=PULP_V2)"
-  "@
-   p.lw \t%0,%2(%1)\t# Read non volatile
-   p.lw \t%0,%2(%1)\t# Read non volatile"
-  [(set_attr "type" "load,load")
-   (set_attr "mode" "SI,SI")]
-)
+;;(define_insn "readsi"
+;;  [(set (match_operand:SI 0 "register_operand" "=r,r")
+;;	(mem:SI (plus:SI (match_operand:SI 1 "register_operand" "r,r") (match_operand:SI 2 "const_arith_operand" "r,i")))
+;;   )
+;;  ]
+;; "(Pulp_Cpu>=PULP_V2)"
+;;  "@
+;;   p.lw \t%0,%2(%1)\t# Read non volatile
+;;   p.lw \t%0,%2(%1)\t# Read non volatile"
+;;  [(set_attr "type" "load,load")
+;;   (set_attr "mode" "SI,SI")]
+;;)
 
 (define_expand "pulp_omp_critical_end"
   [(unspec_volatile [(const_int 0)] UNSPEC_OMP_PULP_CRITICAL_END)]
@@ -3236,12 +3246,14 @@
 ;;)
 
 (define_insn "OffsetedRead"
-  [(set (match_operand:SI 0 "register_operand" "=r")
-        (unspec_volatile:SI [(match_operand:SI 1 "register_operand" "r") (match_operand:SI 2 "immediate_operand" "i")] UNSPEC_OFFSETED_READ)
+  [(set (match_operand:SI 0 "register_operand" "=r,r")
+        (unspec_volatile:SI [(match_operand:SI 1 "register_operand" "r,r") (match_operand:SI 2 "immediate_operand" "r,i")] UNSPEC_OFFSETED_READ)
    )
   ]
   "(Pulp_Cpu>=PULP_V2)"
-  "lw \t%0,%2(%1)\t# Volatile Load offseted"
+  "@
+   lw \t%0,%2(%1)\t# Volatile Load offseted
+   lw \t%0,%2(%1)\t# Volatile Load offseted"
 )
 
 (define_insn "OffsetedWrite"

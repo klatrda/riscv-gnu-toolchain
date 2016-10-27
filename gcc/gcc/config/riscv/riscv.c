@@ -4927,6 +4927,18 @@ static int CheckBuiltin(int Code, int BuiltinIndex, struct ExtraBuiltinImmArg *E
 			}
 			Diag = "__builtin_pulp_clipu (X, Min, Max) expects Min and Max cst, Min=0, Max=2^(N-1)-1";
 			break;
+		case CODE_FOR_bclrsi3:
+			if (Op[1] && (GET_CODE(Op[1]) == CONST_INT)) {
+				if (riscv_valid_bit_field_imm_operand(Op[1], NULL, 0, NULL, NULL)) return 1;
+			}
+			Diag = "builtin_pulp_bclr(X, BitMask) expects BistMask cst, BitMask = ~(BitToClear)\n";
+			break;
+		case CODE_FOR_bsetsi3:
+			if (Op[1] && (GET_CODE(Op[1]) == CONST_INT)) {
+				if (riscv_valid_bit_field_imm_operand(Op[1], NULL, 1, NULL, NULL)) return 1;
+			}
+			Diag = "builtin_pulp_bset(X, BitMask) expects BistMask cst, BitMask = BitToSet\n";
+			break;
 		/* Op1 const > 0, Op2 const >= 0, (Op1+Op2)<32 */
 		case CODE_FOR_extvsi:
 		case CODE_FOR_extzvsi:

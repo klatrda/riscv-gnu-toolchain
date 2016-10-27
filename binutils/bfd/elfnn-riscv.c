@@ -1699,6 +1699,90 @@ riscv_resolve_pcrel_lo_relocs (riscv_pcrel_relocs *p)
   return TRUE;
 }
 
+
+static void Private_Check_Global_Symbol(struct bfd_link_info *info,
+			 bfd *input_bfd,
+			 asection *input_section,
+			 Elf_Internal_Rela *rel,
+			 unsigned long r_symndx,
+			 Elf_Internal_Shdr *symtab_hdr,
+			 struct elf_link_hash_entry **sym_hashes,
+			 struct elf_link_hash_entry *h,
+			 asection *sec,
+			 bfd_vma *relocation,
+			 bfd_boolean *unresolved_reloc,
+			 bfd_boolean *unres_symb,
+			 bfd_boolean *warned,
+			 bfd_boolean *ignored)
+
+{
+	volatile  struct elf_link_hash_entry *h1;
+      	/* It seems this can happen with erroneous or unsupported	input (mixing a.out and elf in an archive, for example.)  */	
+	h = sym_hashes[r_symndx - symtab_hdr->sh_info];		
+							
+	if (info->wrap_hash != NULL && (input_section->flags & SEC_DEBUGGING) != 0)
+		h = ((struct elf_link_hash_entry *) unwrap_hash_lookup (info, input_bfd, &h->root));		
+									
+	while (h->root.type == bfd_link_hash_indirect || h->root.type == bfd_link_hash_warning)
+		h = (struct elf_link_hash_entry *) h->root.u.i.link;
+h1 = h;
+	*warned = FALSE;
+	*ignored = FALSE;
+	*unresolved_reloc = FALSE;
+	*unres_symb = FALSE;
+	*relocation = 0;
+	if (h->root.type == bfd_link_hash_defined || h->root.type == bfd_link_hash_defweak) {
+		sec = h->root.u.def.section;
+		if (sec == NULL || sec->output_section == NULL)
+			/* Set a flag that will be cleared later if we find a relocation value for this symbol.  output_section
+			   is typically NULL for symbols satisfied by a shared library.  */
+			*unresolved_reloc = TRUE;
+		else
+			*relocation = (h->root.u.def.value + sec->output_section->vma + sec->output_offset);
+	} else if (h->root.type == bfd_link_hash_undefweak)
+		;
+	else if (info->unresolved_syms_in_objects == RM_IGNORE && ELF_ST_VISIBILITY (h->other) == STV_DEFAULT)
+		*ignored = TRUE;
+	else if (!info->relocatable) {
+		bfd_boolean err;
+		err = (info->unresolved_syms_in_objects == RM_GENERATE_ERROR || ELF_ST_VISIBILITY (h->other) != STV_DEFAULT);
+		if (err && (info->ignore_hash == NULL || bfd_hash_lookup (info->ignore_hash,  h->root.root.string, FALSE, FALSE) == NULL))
+			*unres_symb = TRUE;
+		else *warned = TRUE;
+	}
+}
+
+
+static void Check_Global_Symbol(struct bfd_link_info *info,
+			 bfd *input_bfd,
+			 asection *input_section,
+			 Elf_Internal_Rela *rel,
+			 unsigned long r_symndx,
+			 Elf_Internal_Shdr *symtab_hdr,
+			 struct elf_link_hash_entry **sym_hashes)
+
+{
+	bfd_vma relocation;
+	bfd_boolean unresolved_reloc, warned, ignored, unres_symb;
+	struct elf_link_hash_entry h;
+	asection sec;
+
+	if (sym_hashes != NULL) {
+		Private_Check_Global_Symbol(info, input_bfd, input_section, rel,
+			 r_symndx,
+			 symtab_hdr,
+			 sym_hashes,
+			 &h, &sec,
+			 &relocation,
+			 &unresolved_reloc,
+			 &unres_symb,
+			 &warned,
+			 &ignored);
+		if (unres_symb) {
+			printf("Unresolved Symbol Found\n"); fflush(stdout);
+		}
+	}
+}
 /* Relocate a RISC-V ELF section.
 
    The RELOCATE_SECTION function is called by the new ELF backend linker
@@ -1781,7 +1865,10 @@ riscv_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 	}
       else
 	{
+	  static int OPT=0;
 	  bfd_boolean warned, ignored;
+
+	  if (OPT) Check_Global_Symbol(info, input_bfd, input_section, rel, r_symndx, symtab_hdr, sym_hashes);
 
 	  RELOC_FOR_GLOBAL_SYMBOL (info, input_bfd, input_section, rel,
 				   r_symndx, symtab_hdr, sym_hashes,
