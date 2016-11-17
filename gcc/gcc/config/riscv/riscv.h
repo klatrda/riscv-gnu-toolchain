@@ -209,6 +209,8 @@ along with GCC; see the file COPYING3.  If not see
 %{mFC=*:--mFC=%*} \
 %{mWci:--mWci} \
 %{mEci:--mEci} \
+%{mComp:--mComp} \
+%{mDIE:--mDIE} \
 %{shared}"
 #endif  /* LINK_SPEC defined */
 
@@ -896,6 +898,25 @@ typedef struct {
   else									\
     asm_fprintf ((FILE), "%U%s", (NAME))
 
+/* Output function table and update export list */
+
+#define ASM_OUTPUT_FUNCTION_LABEL(FILE, NAME, DECL) 	\
+  do {						    	\
+	riscv_output_external((FILE), (DECL), (NAME));	\
+	ASM_OUTPUT_LABEL ((FILE), (NAME));	    	\
+  } while (0)
+
+/* Set by ASM_OUTPUT_SYMBOL_REF when a symbol_ref is output.  */
+#define SYMBOL_FLAG_REFERENCED (1 << SYMBOL_FLAG_MACH_DEP_SHIFT)
+#define SYMBOL_REF_REFERENCED_P(RTX) \
+  ((SYMBOL_REF_FLAGS (RTX) & SYMBOL_FLAG_REFERENCED) != 0)
+
+#define ASM_OUTPUT_SYMBOL_REF(FILE,X) \
+  do {                                                 \
+    SYMBOL_REF_FLAGS (X) |= SYMBOL_FLAG_REFERENCED;    \
+    assemble_name (FILE, XSTR (X, 0));                 \
+  } while (0)
+
 /* This flag marks functions that cannot be lazily bound.  */
 #define SYMBOL_FLAG_BIND_NOW (SYMBOL_FLAG_MACH_DEP << 1)
 #define SYMBOL_REF_BIND_NOW_P(RTX) \
@@ -1066,6 +1087,10 @@ typedef struct {
 #define ASM_OUTPUT_ADDR_DIFF_ELT(STREAM, BODY, VALUE, REL)		\
   fprintf (STREAM, "\t.word\t%sL%d-%sL%d\n",				\
 	   LOCAL_LABEL_PREFIX, VALUE, LOCAL_LABEL_PREFIX, REL)
+
+#undef ASM_OUTPUT_EXTERNAL
+#define ASM_OUTPUT_EXTERNAL(STREAM,DECL,NAME) \
+  riscv_output_external(STREAM,DECL,NAME)
 
 /* This is how to output an assembler line
    that says to advance the location counter

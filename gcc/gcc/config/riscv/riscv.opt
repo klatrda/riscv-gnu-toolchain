@@ -264,3 +264,11 @@ mEci
 Target Var(ERR_CINFO)
 Emit warnings when conflicting .Chip_Info.Info sections are found at link time and abort link.
 
+mComp
+Target Var(LINK_COMP)
+Link in component mode
+
+mDIE
+Target Var(LINK_DUMP_IE_SECT)
+Dump content of import and export sections
+

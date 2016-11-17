@@ -54,6 +54,16 @@
 #define ELF_MAXPAGESIZE			0x1000
 #define ELF_COMMONPAGESIZE		0x1000
 
+/* Linker argument -mComp
+   Set linker to component mode, in this case when export section is generated we use an offset relative to the section head
+   for exported symbol. If not, resident mode, we use the absolute address */
+
+bfd_boolean ComponentMode = FALSE;
+
+/*  Linker argumenr -mDIE, to dump import and export sections */
+bfd_boolean DumpImportExportSections = FALSE;
+
+
 /* The RISC-V linker needs to keep track of the number of relocs that it
    decides to copy as dynamic relocs in check_relocs for each symbol.
    This is so that it can later discard them if they are found to be
@@ -494,6 +504,594 @@ bad_static_reloc (bfd *abfd, unsigned r_type, struct elf_link_hash_entry *h)
   bfd_set_error (bfd_error_bad_value);
   return FALSE;
 }
+
+
+
+typedef struct PulpImportRef {
+        Elf_Internal_Rela       Rel;
+        struct PulpImportRef    *Next;
+} PulpImportRef;
+
+typedef struct PulpImportEntry {
+        char                    *Name;
+	int			RelocCount;
+        PulpImportRef           *Ref;
+        struct PulpImportEntry  *Next;
+} PulpImportEntry;
+
+typedef struct PulpExportEntry {
+        char                    *Name;
+	unsigned int		Address;
+        struct PulpExportEntry  *Next;
+} PulpExportEntry;
+
+#define HASH_IMPORT_E 1024
+
+static PulpImportEntry * ImportEntries[HASH_IMPORT_E];
+static PulpExportEntry * ExportEntries[HASH_IMPORT_E];
+
+static unsigned long hash_sdbm(const char *str)
+
+{
+        unsigned long hash = 0;
+        int c;
+
+        while ((c = (*str++))) hash = c + (hash << 6) + (hash << 16) - hash;
+        return (hash % HASH_IMPORT_E);
+}
+
+bfd_boolean InsertExportEntry(const char *Name)
+
+{
+	unsigned int Index = hash_sdbm(Name);
+	PulpExportEntry *PtEntry = ExportEntries[Index];
+	PulpExportEntry *PtPrevEntry = NULL;
+
+	while (PtEntry && (strcmp(PtEntry->Name, Name) != 0)) {
+		PtPrevEntry = PtEntry; PtEntry = PtEntry->Next;
+	}
+	if (PtEntry == NULL) {
+		PtEntry = (PulpExportEntry *) bfd_malloc (sizeof (PulpExportEntry));
+		if (PtEntry == NULL) return FALSE;
+		PtEntry->Name = (char *) bfd_malloc (sizeof (char) * strlen(Name));
+		if (PtEntry->Name == NULL) return FALSE;
+		strcpy(PtEntry->Name, Name);
+		PtEntry->Address = 0; PtEntry->Next = NULL;
+		if (PtPrevEntry) PtPrevEntry->Next = PtEntry; else ExportEntries[Index] = PtEntry;
+	}
+	return TRUE;
+}
+
+unsigned int ExportSectionSize(unsigned int *EntryCount)
+
+{
+	int i;
+	PulpExportEntry *PtEntry;
+	unsigned int Size = 4;	/* Room for Number of Exported Symbs */
+	unsigned int Entry = 0;
+	
+	for (i=0; i<HASH_IMPORT_E; i++) {
+		if (ExportEntries[i] == NULL) continue;
+		for (PtEntry = ExportEntries[i]; PtEntry; PtEntry = PtEntry->Next) {
+			Entry++;
+			Size += (strlen(PtEntry->Name)+1+1);	// Null terminated and one byte prefix to pass section index
+		}
+	}
+	/* Align on 4 bytes */
+	if (Size % 4) {
+		Size = ((Size>>2)+1)<<2;
+	}
+	/* Add Value section */
+	Size += Entry*4;
+	if (EntryCount) *EntryCount = Entry;
+	if (Entry == 0) Size = 0;
+	return Size;
+}
+
+
+bfd_boolean ReleaseExportEntry()
+
+{
+	int i;
+	PulpExportEntry *PtEntry, *NextEntry;
+	
+	for (i=0; i<HASH_IMPORT_E; i++) {
+		if (ExportEntries[i] == NULL) continue;
+		for (PtEntry = ExportEntries[i]; PtEntry; PtEntry = NextEntry) {
+			NextEntry = PtEntry->Next;
+			free(PtEntry->Name); free(PtEntry);
+		}
+		ExportEntries[i] = NULL;
+	}
+	return TRUE;
+}
+
+static bfd_boolean InsertImportEntry(const char *Name, Elf_Internal_Rela *Rel, bfd_vma OutOffset, bfd_boolean Collect, asection *Sec)
+
+{
+	unsigned int Index = hash_sdbm(Name);
+	PulpImportEntry *PtEntry = ImportEntries[Index];
+	PulpImportEntry *PtPrevEntry = NULL;
+	PulpImportRef *Ref, *PtRef;
+	static PulpImportEntry *LastEntry = NULL;
+	static Elf_Internal_Rela *LastRel = NULL;
+
+	while (PtEntry && (strcmp(PtEntry->Name, Name) != 0)) {
+		PtPrevEntry = PtEntry; PtEntry = PtEntry->Next;
+	}
+	if (PtEntry == NULL) {
+		PtEntry = (PulpImportEntry *) bfd_malloc (sizeof (PulpImportEntry));
+		if (PtEntry == NULL) return FALSE;
+		PtEntry->Name = (char *) bfd_malloc (sizeof (char) * strlen(Name));
+		if (PtEntry->Name == NULL) return FALSE;
+		strcpy(PtEntry->Name, Name);
+		PtEntry->Ref = NULL; PtEntry->Next = NULL;
+		PtEntry->RelocCount = 0;
+		if (PtPrevEntry) PtPrevEntry->Next = PtEntry; else ImportEntries[Index] = PtEntry;
+	}
+	if (Collect) {
+		LastEntry = PtEntry;
+		if ((ELFNN_R_TYPE(Rel->r_info) == R_RISCV_LO12_I) && (LastEntry == PtEntry) &&
+		    (ELFNN_R_TYPE(LastRel->r_info) == R_RISCV_HI20) && ((Rel->r_offset - LastRel->r_offset) == 4) ) {
+		} else PtEntry->RelocCount = PtEntry->RelocCount + 1;
+		LastRel = Rel;
+		return TRUE;
+	}
+
+	Ref = (PulpImportRef *) bfd_malloc (sizeof (PulpImportRef));
+	if (Ref == NULL) return FALSE;
+	Ref->Rel = *Rel; Ref->Next = NULL;
+	Ref->Rel.r_info = ELFNN_R_TYPE(Rel->r_info);
+	Ref->Rel.r_offset = Rel->r_offset + OutOffset;
+	PtRef = PtEntry->Ref;
+	while (PtRef && PtRef->Next != NULL) PtRef = PtRef->Next;
+	if (PtRef) PtRef->Next = Ref; else PtEntry->Ref = Ref;
+	return TRUE;
+}
+
+bfd_boolean ReleaseImportEntry()
+
+{
+	int i;
+	PulpImportEntry *PtEntry, *NextEntry;
+	PulpImportRef *PtRef, *NextRef;
+	
+	for (i=0; i<HASH_IMPORT_E; i++) {
+		if (ImportEntries[i] == NULL) continue;
+		for (PtEntry = ImportEntries[i]; PtEntry; PtEntry = NextEntry) {
+			NextEntry = PtEntry->Next;
+			for (PtRef = PtEntry->Ref; PtRef; PtRef = NextRef) {
+				NextRef = PtRef->Next;
+				free(PtRef);
+			}
+			free(PtEntry->Name); free(PtEntry);
+		}
+		ImportEntries[i] = NULL;
+	}
+	return TRUE;
+}
+
+/*
+
+N imported symbols
+
+Structure of .pulp.import.names Section:
+----------------------------------------
+
+	Len(Name) = Length(Name)+1 				Null terminated string
+	Size:	(N+1)*4 + Sum(j:1..N){Len(Namej)}		If Type=0
+	     	(N+1)*4						If Type=1
+
+		Base						Bit0: 		Section Type: 0 with names, 1 uses pre resolved indexes
+								Bit1:31:	Section size
+										Here we could force section to be a multiple of 4 and save 2 bits
+
+	Type=0 (Names)
+		Base+4						Name1_Index = Base+4*(N+1)
+		Base+8						Name2_Index = Base+4*(N+1)+Len(Name1)
+		...
+		Base+4*(i)					Namei_Index = Base+4*(N+1)+Sum(j:1..(i-1)){Len(Namej)}
+		...
+		Base+4*(N)					NameN_Index = Base+4*(N+1)+Sum(j:1..(N-1)){Len(Namej)}
+		Base+4*(N+1)					Name1
+		Base+4*(N+1)+Len(Name1)				Name2
+		...
+		Base+4*(N+1)+Sum(j:1..(i-1)){Len(Namej)}	Namei	
+		...
+		Base+4*(N+1)+Sum(j:1..(N-1)){Len(Namej)}	NameN	
+	Type=1 (Pre resolved indexes)
+		Base+4						Name1_Index (points to corresponding name in .export)
+		Base+8						Name2_Index (points to corresponding name in .export)
+		...
+		Base+4*(i)					Namei_Index (points to corresponding name in .export)
+		...
+		Base+4*(N)					NameN_Index (points to corresponding name in .export)
+
+Structure of .pulp.import.reloc Section:
+----------------------------------------
+
+	Size for Namei:	4*(N_Reloc(i) + 1)
+	Total Size:	4 + Sum(j:1..N){4*(N_Reloc(j) + 1)}
+
+	Entry(i+1) = Entry(i) + 4*(N_Reloc(i) + 1)
+
+		Base			Bit  0:11 		NumberOfImports
+					Bit 12:31 		(Size of Relocs Section) / 4. Contains only words thus multiple of 4 bytes
+
+		Base+4			Name_Index(1)		In .pulp.import.names
+		Base+6			N_Reloc(1)		Number of reloc for this name
+		Base+8			Reloc			One reloc
+		Base+12			Reloc			One reloc
+		...
+		Base+4+4*N_Reloc(1)	Reloc			Size for relocs: N_Reloc(1)*4, Total for Name1: 4*(N_Reloc(1) + 1)
+		....
+
+	Reloc:
+		Reloc Type: 4 Bits  	=> Bit31 : Bit28
+			0	R_RISCV_JAL					Offset = @Name-pc
+					pc: 	jal (pc+Offset[20..1])		InsnBits[31:12] =>  I[20],I[10:1],I[11],I[19:12]
+			1	Pair of R_RISCV_HI20, R_RISCV_LO12_I
+					pc:	lui Reg,Hi20(Name)		InsBits[31:12] => @Name[31:12]
+					pc+4:	addi Reg, Reg, Lo12(Name)	InsBits[31:20] => @Name[11:0}
+			2	R_RISCV_HI20
+					pc:	lui Reg,Hi20(Name)		InsBits[31:12] => @Name[31:12]
+			3	R_RISCV_LO12_I
+					pc:	addi Reg, Reg, Lo12(Name)	InsBits[31:20] => @Name[11:0}
+			4	R_RISCV_LO12_S
+					pc:					InsnBits[31:25] => @Name[15:5], InsnBits[11:7] => @Name[4:0]
+
+		Reloc Offset: 28 Bits	=> Bit27 : Bit0				Offset from section base / 2.
+										On RiscV we can assume that offset is always a multiple of 2
+
+
+Structure of .pulp.export Section:
+----------------------------------
+
+	Total Size:	Pad4(4 + +Sum(j=1..N){Len(Namej)+1}) + 4*N. Is a multiple of 4
+
+	Base						Bit15:Bit0 	N: Number of exported names
+							Bit31:Bit16 	Offset/4 to first Value in this section. /4 since all entities are words
+	Base+4						Section Name1	Section (byte) in which name is defined, Null terminated name
+	Base+4+Len(Name1)				Section Name2
+	...
+	Base+4+Sum(j=1..i-1){Len(Namej)+1}		Section Namei
+	...
+	Base+4+Sum(j=1..N-1){Len(Namej)+1}		Section NameN
+
+	Base+4+Sum(j=1..N){Len(Namej+1)}+Pad4		Value1	Link time Offset for Name1	Pad4: Alignment to 4
+	...
+	Base+4+Sum(j=1..N){Len(Namej+1)}+Pad4+4*N	ValueN	Link time Offset for NameN
+	
+
+*/
+
+#define	IMPORT_REL_JAL			0
+#define	IMPORT_REL_HI20_LO12_I		1
+#define	IMPORT_REL_HI20			2
+#define	IMPORT_REL_LO12_I		3
+#define	IMPORT_REL_LO12_S		4
+
+#define	IMPORT_SECN_NAME_SZ		4
+#define	IMPORT_SECN_TYPE_SZ		4
+#define	IMPORT_SECN_NAME_INDEX_SZ	4
+
+#define	IMPORT_SECR_IMPORT_CNT_SZ	4
+#define	IMPORT_SECR_NAME_INDEX_SZ	2
+#define	IMPORT_SECR_REL_CNT_SZ		2
+#define	IMPORT_SECR_REL_EXPR_SZ		4
+
+static char *RelImage(unsigned int Rel)
+
+{
+	switch (Rel) {
+		case IMPORT_REL_JAL: return "REL_JAL";
+		case IMPORT_REL_HI20_LO12_I : return "REL_HI20_LO12_I";
+		case IMPORT_REL_HI20: return "REL_HI20";
+		case IMPORT_REL_LO12_I: return "REL_LO12_I";
+		case IMPORT_REL_LO12_S: return "REL_LO12_S";
+		default: return "Unknown Rel";
+	}
+}
+static unsigned int PulpImportNameSize(const char *Name)
+
+{
+	unsigned int Size = strlen(Name)+1;
+	return Size;
+}
+
+void PulpImportSectionsSize(int Mode, unsigned int *SecName, unsigned int *SecReloc, unsigned int *N_Import, bfd_boolean Collect)
+
+{
+	int i;
+	PulpImportEntry *PtEntry;
+	PulpImportRef *PtRef;
+	unsigned int NameSize = IMPORT_SECN_TYPE_SZ;		/* Name Section Type */
+	unsigned int RefSize = IMPORT_SECR_IMPORT_CNT_SZ;	/* N Import */
+	unsigned int N_Imp = 0;
+	int Skip = 0;
+	
+	for (i=0; i<HASH_IMPORT_E; i++) {
+		if (ImportEntries[i] == NULL) continue;
+		for (PtEntry = ImportEntries[i]; PtEntry; PtEntry = PtEntry->Next) {
+			if ((PtEntry->RelocCount == 0)&&Collect || (PtEntry->Ref == NULL)&&(!Collect)) continue;
+			RefSize += IMPORT_SECR_NAME_INDEX_SZ;		/* Name Index */
+			RefSize += IMPORT_SECR_REL_CNT_SZ;		/* Number of Relocs for Name Index */
+			NameSize += IMPORT_SECN_NAME_INDEX_SZ;		/* Name Index */
+			N_Imp ++;
+			if (Mode == 0) NameSize += PulpImportNameSize(PtEntry->Name);
+			if (Collect) RefSize += PtEntry->RelocCount*IMPORT_SECR_REL_EXPR_SZ;
+			else {
+				for (PtRef = PtEntry->Ref; PtRef; PtRef = PtRef->Next) {
+					if (Skip) {
+						Skip = 0; continue;
+					}
+					if ((PtRef->Rel.r_info == R_RISCV_HI20) && PtRef->Next &&
+					    (PtRef->Next->Rel.r_info == R_RISCV_LO12_I) && ((PtRef->Next->Rel.r_offset - PtRef->Rel.r_offset)==4)) Skip = 1;
+					RefSize += IMPORT_SECR_REL_EXPR_SZ;	/* Reloc Expr */
+				}
+			}
+		}
+	}
+	*SecName = NameSize;
+	*SecReloc = RefSize;
+	*N_Import = N_Imp;
+}
+
+static bfd_boolean PulpExportCreateSection(unsigned int **Section, unsigned int *SizeSection, struct bfd_link_info *info)
+
+{
+	PulpExportEntry *PtEntry;
+	char *Base = NULL;
+	unsigned int *BaseI;
+	unsigned int *Entries;
+	unsigned int Entry = 0, BaseLinkedVal, Addr = 0;
+	unsigned int Size = ExportSectionSize(&Entry);
+	int i, j;
+
+	*SizeSection = Size;
+	if (Size == 0) {
+		*Section = NULL; return TRUE;
+	}
+	*Section = (unsigned int *) bfd_malloc (Size);
+	Entries = (unsigned int *) bfd_malloc (Entry*sizeof(unsigned int));
+
+	if (*Section == NULL || Entries == NULL) {
+	  	(*_bfd_error_handler) (_("Export Create Section, Can't allocate memory"));
+		return FALSE;
+	}
+
+	Entry = 0;
+	Base = (char *) (&(*Section)[1]);
+	Addr = 4;
+	for (i=0; i<HASH_IMPORT_E; i++) {
+		if (ExportEntries[i] == NULL) continue;
+		for (PtEntry = ExportEntries[i]; PtEntry; PtEntry = PtEntry->Next) {
+			unsigned int Len = strlen(PtEntry->Name);
+  			struct bfd_link_hash_entry *h;
+  			h = bfd_link_hash_lookup (info->hash, PtEntry->Name, FALSE, FALSE, TRUE);
+			if (h == NULL) {
+	  			(*_bfd_error_handler) (_("Export Create Section, Can't find symbol: %s"), PtEntry->Name);
+				return FALSE;
+			}
+			if (ComponentMode)
+				// We don't want lma or vma added here just an offset relative to the beginning of the output section in which it is
+				Entries[Entry++] = h->u.def.value + h->u.def.section->output_offset;
+			else 
+				Entries[Entry++] = h->u.def.value + sec_addr (h->u.def.section);
+			Base[0] = 0; /* Here should come the section in which the symbol is defined */
+			for (j=0; j<Len; j++)  Base[j+1] = PtEntry->Name[j];
+			Base[j+1] = 0; /* Null termination */
+			Base += (Len+2); Addr += (Len+2);
+		}
+	}
+	{
+		unsigned int Base1 = (unsigned int) Base;
+		if (Base1 % 4) Base1 = ((Base1>>2)+1)<<2;
+		BaseI = (unsigned int *) Base1;
+		if (Addr % 4) Addr = ((Addr>>2)+1)<<2;
+	}
+	BaseLinkedVal = Addr;
+	Entry = 0;
+	for (i=0; i<HASH_IMPORT_E; i++) {
+		if (ExportEntries[i] == NULL) continue;
+		for (PtEntry = ExportEntries[i]; PtEntry; PtEntry = PtEntry->Next) {
+			BaseI[Entry] = Entries[Entry]; Entry++;
+		}
+	}
+	(*Section)[0] = (Entry&0x0FFFF) | ((BaseLinkedVal>>2) << 16);
+	free(Entries);
+	return TRUE;
+}
+
+bfd_boolean PulpImportCreateNameAndRelocSections(int Mode,
+						 unsigned int **S_Name, unsigned int *S_NameSize,
+						 unsigned int **S_Reloc, unsigned int *S_RelocSize,
+						 unsigned int *NImport)
+
+{
+	PulpImportEntry *PtEntry;
+	PulpImportRef *PtRef;
+	unsigned int SecNameSize;
+	unsigned int SecRelocSize;
+	unsigned int *SecName;
+	unsigned int *SecReloc;
+	unsigned int N_Import;
+	int Skip = 0;
+	unsigned N_Imp = 0;
+	unsigned int HeadName, HeadRel;
+	int i;
+	static int Trace = 0;
+
+	PulpImportSectionsSize(Mode, &SecNameSize, &SecRelocSize, &N_Import, FALSE);
+
+	SecName = (unsigned int *) bfd_malloc (SecNameSize);
+	SecReloc = (unsigned int *) bfd_malloc (SecRelocSize);
+	*S_Name = SecName; *S_NameSize = SecNameSize;
+	*S_Reloc = SecReloc; *S_RelocSize = SecRelocSize;
+
+	if (SecName == NULL || SecReloc == NULL) return FALSE;
+	SecName[0]  = (Mode&0x1) | ((SecNameSize)<<1);
+	HeadName = (1 + N_Import)*4;
+
+	if (Trace) fprintf(stderr, "Names: Size: %d, Relocs: Size: %d, N Imports: %d, Head Strings: %X\n", SecNameSize, SecRelocSize, N_Import, HeadName*4);
+
+	for (i=0; i<HASH_IMPORT_E; i++) {
+		if (ImportEntries[i] == NULL) continue;
+		for (PtEntry = ImportEntries[i]; PtEntry; PtEntry = PtEntry->Next) {
+			unsigned int j;
+			unsigned int NameSize;
+			char *Pt;
+
+			if (PtEntry->Ref == NULL) continue;
+
+			if (Trace) fprintf(stderr, "At: %5X Creating Name  Entry: %5d, String: %5X (%s)\n", (1+N_Imp)*4, N_Imp, HeadName, PtEntry->Name);
+			SecName[1+N_Imp] = HeadName; N_Imp++;
+			if (Mode == 1) continue;
+			NameSize = PulpImportNameSize(PtEntry->Name);
+			Pt = ((char *) SecName) + HeadName;
+			for (j=0; j<strlen(PtEntry->Name); j++) Pt[j] = PtEntry->Name[j];
+			Pt[j] = 0;
+			if (Trace) fprintf(stderr, "At: %5X Creating Name String: %s\n", HeadName, PtEntry->Name);
+			HeadName += NameSize;
+		}
+	}
+	SecReloc[0] = (N_Import&0x0FFF) | ((SecRelocSize>>2)<<12); N_Imp = 0; HeadRel = 1;
+	for (i=0; i<HASH_IMPORT_E; i++) {
+		unsigned int Base;
+		if (ImportEntries[i] == NULL) continue;
+		for (PtEntry = ImportEntries[i]; PtEntry; PtEntry = PtEntry->Next) {
+			unsigned int RelCount = 0;
+			if (PtEntry->Ref == NULL) continue;
+			Base = HeadRel++;
+			for (PtRef = PtEntry->Ref; PtRef; PtRef = PtRef->Next) {
+				unsigned int Rel;
+				if (Skip) {
+					Skip = 0; continue;
+				}
+				if ((PtRef->Rel.r_info == R_RISCV_HI20) && PtRef->Next &&
+				    (PtRef->Next->Rel.r_info == R_RISCV_LO12_I) && ((PtRef->Next->Rel.r_offset - PtRef->Rel.r_offset)==4)) {
+					Skip = 1;
+					Rel = IMPORT_REL_HI20_LO12_I;
+				} else {
+					switch (PtRef->Rel.r_info) {
+						case R_RISCV_JAL: Rel = IMPORT_REL_JAL; break;
+						case R_RISCV_HI20: Rel = IMPORT_REL_HI20; break;
+						case R_RISCV_LO12_I: Rel = IMPORT_REL_LO12_I; break;
+						case R_RISCV_LO12_S: Rel = IMPORT_REL_LO12_S; break;
+						default: {
+								reloc_howto_type *howto = riscv_elf_rtype_to_howto (PtRef->Rel.r_info);
+								Rel = -1; /* Error */
+	  							(*_bfd_error_handler) (_("Unknown Relocation: %X (%s)"),
+											(int) PtRef->Rel.r_info,
+											howto?howto->name:"Unknown");
+								return FALSE;
+							}
+					}
+				}
+				if (Trace) fprintf(stderr, "At: %5X Adding   Rel for Entry: %5d => %8X [Rel:%8X, Offset: %8X]\n",
+						   HeadRel*4, N_Imp+1, ((Rel<<28) | ((PtRef->Rel.r_offset>>1) & 0x0FFFFFFF)), Rel, PtRef->Rel.r_offset);
+				SecReloc[HeadRel++] = (Rel<<28) | ((PtRef->Rel.r_offset>>1) & 0x0FFFFFFF);
+				RelCount++;
+			}
+			SecReloc[Base] = ((4*(N_Imp+1))&0x0FFFF) | ((RelCount<<16)&0xFFFF0000);
+			if (Trace) fprintf(stderr, "At: %5X Creating Rel     Entry: %5d, Rel Count: %d\n", Base*4, 4*(N_Imp+1), RelCount); 
+			N_Imp++;
+		}
+	}
+	*NImport = N_Import;
+	return TRUE;
+}
+
+void DiassembleImports(unsigned int *ImportNames, unsigned int *ImportRelocs)
+
+{
+	unsigned int Addr, N_Import;
+	unsigned int i, j;
+	char *Name;
+
+	if (ImportNames == NULL || ImportRelocs == NULL) {
+		return;
+	}
+	N_Import = ImportRelocs[0] & 0x0FFF;
+
+	fprintf(stderr, "Section: .pulp.import.names\n");
+	Addr = 0;
+	fprintf(stderr, "%8s  %17s %20s\n", "Offset", "Content", "Comment");
+	fprintf(stderr, "%8x: 0x%15X (Mode = %1d, Section Size: 0x%X)\n",
+		Addr, ImportNames[Addr/4], ImportNames[Addr/4]&0x01, (ImportNames[Addr/4]>>1));
+	Addr += 4;
+	Name = (char *) &ImportNames[1];
+	for (i=0; i<N_Import; i++) {
+		fprintf(stderr, "%8x: 0x%15X (Import Symbol %5d, Name @ in this section)\n", Addr, ImportNames[Addr/4], i);
+		Addr += 4; Name += 4;
+	}
+	for (i=0; i<N_Import; i++) {
+		fprintf(stderr, "%8x: %17s (Import Symbol %5d)\n", Addr, Name, i);
+		Addr = Addr + strlen(Name) + 1; Name = Name + strlen(Name) + 1;
+	}
+
+	fprintf(stderr, "Section: .pulp.import.relocs\n");
+	Addr = 0;
+	fprintf(stderr, "%8s  %17s %20s\n", "Offset", "Content", "Comment");
+	fprintf(stderr, "%8x: 0x%15X (Number of Imported Symbols: %d, Section Size: 0x%X)\n",
+		Addr, ImportRelocs[Addr/4], ImportRelocs[Addr/4]&0x0FFF, ((ImportRelocs[Addr/4]>>12)&0x000FFFFF)<<2);
+	Addr += 4;
+	for (i=0; i<N_Import; i++) {
+		unsigned int Entry = (ImportRelocs[Addr/4] & 0x0FFFF);
+		unsigned int RelCount = (ImportRelocs[Addr/4]>>16) & 0x0FFFF;
+
+		Name = ((char *) ImportNames) + ImportNames[Entry>>2];
+		fprintf(stderr, "%8x: 0x%15X (Name @: 0x%6X, Reloc: %3d) %s\n", Addr, ImportRelocs[Addr/4], Entry, RelCount, Name);
+		Addr += 4;
+		for (j=0; j<RelCount; j++) {
+			unsigned int Rel = ImportRelocs[Addr/4];
+			unsigned int Offset = (Rel & 0x0FFFFFFF)<<1;
+			unsigned int Type = (Rel>>28);
+
+			fprintf(stderr, "%8x: 0x%15X (Offset: 0x%6X, Reloc: %s)\n", Addr, ImportRelocs[Addr/4], Offset, RelImage(Type));
+			Addr += 4;
+		}
+	}
+}
+
+void DiassembleExports(unsigned int *Section)
+
+{
+	unsigned int Entry;
+	char *Base;
+	unsigned int *BaseI;
+	unsigned int Addr;
+	int i;
+
+	if (Section == NULL) return;
+
+	fprintf(stderr, "Section: .pulp.export\n");
+	Entry = Section[0]&0x0FFFF;
+	Base = &Section[1];
+
+	Addr = 0;
+	fprintf(stderr, "%8s  %17s %20s\n", "Offset", "Content", "Comment");
+	fprintf(stderr, "%8x: 0x%15X (Number of Exported Symbols: %d, Base Linker Values: 0x%X, Section Size: 0x%X)\n",
+		Addr, Section[Addr], Section[Addr]&0x0FFFF, ((Section[Addr]>>16)<<2)&0x0FFFF,
+		(Section[Addr]&0x0FFFF)*4 + (((Section[Addr]>>16)<<2)&0x0FFFF));
+	Addr += 4;
+	for (i=0; i<Entry; i++) {
+		unsigned int Off = strlen(Base+1) + 2;
+		fprintf(stderr, "%8x: %17s Section: %2d (Exported Symbol %5d)\n", Addr, Base+1, Base[0], i);
+		Base = Base + Off; Addr = Addr + Off;
+	}
+	while ((unsigned int) Base % 4) {
+		Base++; Addr++;
+	}
+	// BaseI = (unsigned int *) Base;
+	Addr = (Section[0]>>16)<<2;
+	BaseI = Section + (Section[0]>>16);
+	for (i=0; i<Entry; i++) {
+		fprintf(stderr, "%8x: 0x%15X (Exported Symbol %5d, Offset in Section)\n", Addr, BaseI[i], i);
+		Addr+=4;
+	}
+}
+
 /* Look through the relocs for a section during the first phase, and
    allocate space in the global offset table or procedure linkage
    table.  */
@@ -548,6 +1146,22 @@ riscv_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
 	  h->root.non_ir_ref = 1;
 	}
 
+      if (h && h->root.type == bfd_link_hash_defweak) {
+		static int Trace = 0;
+		asection *sec;
+      		reloc_howto_type *howto = riscv_elf_rtype_to_howto (ELFNN_R_TYPE (rel->r_info));
+
+                sec = h->root.u.def.section;
+
+                if (sec != NULL && (strcmp(sec->name, ".pulp.import")==0)) {
+                        if (Trace) printf("Pre Importing %15s in reloc: %4d -> %4d:%22s, at offset: (%8X + %8X) => %X\n",
+                                	  h->root.root.string, rel->r_info,
+                                	  ELFNN_R_TYPE(rel->r_info), howto->name, (int) rel->r_offset, (int) sec->output_offset,
+                                	  (int) sec->output_offset+(int)rel->r_offset);
+                        InsertImportEntry(h->root.root.string, rel, sec->output_offset, TRUE, sec);
+                }
+
+      }
       switch (r_type)
 	{
 	case R_RISCV_TLS_GD_HI20:
@@ -1605,7 +2219,6 @@ typedef struct {
   htab_t hi_relocs;
   riscv_pcrel_lo_reloc *lo_relocs;
 } riscv_pcrel_relocs;
-
 static hashval_t
 riscv_pcrel_reloc_hash (const void *entry)
 {
@@ -1700,24 +2313,23 @@ riscv_resolve_pcrel_lo_relocs (riscv_pcrel_relocs *p)
 }
 
 
-static void Private_Check_Global_Symbol(struct bfd_link_info *info,
-			 bfd *input_bfd,
-			 asection *input_section,
-			 Elf_Internal_Rela *rel,
-			 unsigned long r_symndx,
-			 Elf_Internal_Shdr *symtab_hdr,
-			 struct elf_link_hash_entry **sym_hashes,
-			 struct elf_link_hash_entry *h,
-			 asection *sec,
-			 bfd_vma *relocation,
-			 bfd_boolean *unresolved_reloc,
-			 bfd_boolean *unres_symb,
-			 bfd_boolean *warned,
-			 bfd_boolean *ignored)
+static void RegisterImportReloc(struct bfd_link_info *info,
+			 	bfd *input_bfd,
+			 	asection *input_section,
+				bfd_vma pc,
+			 	Elf_Internal_Rela *rel,
+			 	unsigned long r_symndx,
+			 	Elf_Internal_Shdr *symtab_hdr,
+			 	struct elf_link_hash_entry **sym_hashes,
+      			 	reloc_howto_type *howto)
 
 {
-	volatile  struct elf_link_hash_entry *h1;
-      	/* It seems this can happen with erroneous or unsupported	input (mixing a.out and elf in an archive, for example.)  */	
+	struct elf_link_hash_entry *h;
+	asection *sec;
+
+	if (sym_hashes == NULL) return;
+
+      	/* It seems this can happen with erroneous or unsupported input (mixing a.out and elf in an archive, for example.)  */	
 	h = sym_hashes[r_symndx - symtab_hdr->sh_info];		
 							
 	if (info->wrap_hash != NULL && (input_section->flags & SEC_DEBUGGING) != 0)
@@ -1725,64 +2337,19 @@ static void Private_Check_Global_Symbol(struct bfd_link_info *info,
 									
 	while (h->root.type == bfd_link_hash_indirect || h->root.type == bfd_link_hash_warning)
 		h = (struct elf_link_hash_entry *) h->root.u.i.link;
-h1 = h;
-	*warned = FALSE;
-	*ignored = FALSE;
-	*unresolved_reloc = FALSE;
-	*unres_symb = FALSE;
-	*relocation = 0;
-	if (h->root.type == bfd_link_hash_defined || h->root.type == bfd_link_hash_defweak) {
+	if (h->root.type == bfd_link_hash_defweak) {
 		sec = h->root.u.def.section;
-		if (sec == NULL || sec->output_section == NULL)
-			/* Set a flag that will be cleared later if we find a relocation value for this symbol.  output_section
-			   is typically NULL for symbols satisfied by a shared library.  */
-			*unresolved_reloc = TRUE;
-		else
-			*relocation = (h->root.u.def.value + sec->output_section->vma + sec->output_offset);
-	} else if (h->root.type == bfd_link_hash_undefweak)
-		;
-	else if (info->unresolved_syms_in_objects == RM_IGNORE && ELF_ST_VISIBILITY (h->other) == STV_DEFAULT)
-		*ignored = TRUE;
-	else if (!info->relocatable) {
-		bfd_boolean err;
-		err = (info->unresolved_syms_in_objects == RM_GENERATE_ERROR || ELF_ST_VISIBILITY (h->other) != STV_DEFAULT);
-		if (err && (info->ignore_hash == NULL || bfd_hash_lookup (info->ignore_hash,  h->root.root.string, FALSE, FALSE) == NULL))
-			*unres_symb = TRUE;
-		else *warned = TRUE;
-	}
-}
-
-
-static void Check_Global_Symbol(struct bfd_link_info *info,
-			 bfd *input_bfd,
-			 asection *input_section,
-			 Elf_Internal_Rela *rel,
-			 unsigned long r_symndx,
-			 Elf_Internal_Shdr *symtab_hdr,
-			 struct elf_link_hash_entry **sym_hashes)
-
-{
-	bfd_vma relocation;
-	bfd_boolean unresolved_reloc, warned, ignored, unres_symb;
-	struct elf_link_hash_entry h;
-	asection sec;
-
-	if (sym_hashes != NULL) {
-		Private_Check_Global_Symbol(info, input_bfd, input_section, rel,
-			 r_symndx,
-			 symtab_hdr,
-			 sym_hashes,
-			 &h, &sec,
-			 &relocation,
-			 &unresolved_reloc,
-			 &unres_symb,
-			 &warned,
-			 &ignored);
-		if (unres_symb) {
-			printf("Unresolved Symbol Found\n"); fflush(stdout);
+		if (sec != NULL && sec->output_section != NULL && (strcmp(sec->name, ".pulp.import")==0)) {
+			static int Trace = 0;
+			if (Trace) printf("    Importing %15s in reloc: %4d -> %4d:%22s, at offset: (%8X + %8X) => %X\n",
+					  h->root.root.string, rel->r_info,
+					  ELFNN_R_TYPE(rel->r_info), howto->name, rel->r_offset, (int) input_section->output_offset,
+					  (int) input_section->output_offset+(int)rel->r_offset);
+			InsertImportEntry(h->root.root.string, rel, input_section->output_offset, FALSE, sec);
 		}
 	}
 }
+
 /* Relocate a RISC-V ELF section.
 
    The RELOCATE_SECTION function is called by the new ELF backend linker
@@ -1865,10 +2432,10 @@ riscv_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 	}
       else
 	{
-	  static int OPT=0;
+	  static int OPT=1;
 	  bfd_boolean warned, ignored;
 
-	  if (OPT) Check_Global_Symbol(info, input_bfd, input_section, rel, r_symndx, symtab_hdr, sym_hashes);
+ 	  if (OPT) RegisterImportReloc(info, input_bfd, input_section, pc, rel, r_symndx, symtab_hdr, sym_hashes, howto);
 
 	  RELOC_FOR_GLOBAL_SYMBOL (info, input_bfd, input_section, rel,
 				   r_symndx, symtab_hdr, sym_hashes,
@@ -2769,6 +3336,7 @@ _bfd_riscv_relax_call (bfd *abfd, asection *sec, asection *sym_sec,
 		       struct bfd_link_info *link_info,
 		       Elf_Internal_Rela *rel,
 		       bfd_vma symval,
+		       bfd_boolean is_import,
 		       bfd_boolean *again)
 {
   bfd_byte *contents = elf_section_data (sec)->this_hdr.contents;
@@ -2776,6 +3344,7 @@ _bfd_riscv_relax_call (bfd *abfd, asection *sec, asection *sym_sec,
   bfd_boolean near_zero = (symval + RISCV_IMM_REACH/2) < RISCV_IMM_REACH;
   bfd_vma auipc, jalr;
   int rd, r_type, len = 4, rvc = elf_elfheader (abfd)->e_flags & EF_RISCV_RVC;
+  static bfd_boolean Mem20Range = TRUE;
 
   /* If the call crosses section boundaries, an alignment directive could
      cause the PC-relative offset to later increase.  Assume at most
@@ -2784,7 +3353,7 @@ _bfd_riscv_relax_call (bfd *abfd, asection *sec, asection *sym_sec,
     foff += (foff < 0 ? -ELF_MAXPAGESIZE : ELF_MAXPAGESIZE);
 
   /* See if this function call can be shortened.  */
-  if (!VALID_UJTYPE_IMM (foff) && !(!link_info->shared && near_zero))
+  if ((is_import&&!Mem20Range) || (!VALID_UJTYPE_IMM (foff) && !(!link_info->shared && near_zero)))
     return TRUE;
 
   /* Shorten the function call.  */
@@ -2832,6 +3401,7 @@ _bfd_riscv_relax_clean_rvc (bfd *abfd, asection *sec, asection *sym_sec,
                             struct bfd_link_info *link_info,
                             Elf_Internal_Rela *rel,
                             bfd_vma symval,
+		            bfd_boolean is_import ATTRIBUTE_UNUSED,
                             bfd_boolean *again)
 {
   /* Mergeable symbols might later move out of range.  */
@@ -2861,6 +3431,7 @@ _bfd_riscv_relax_lui (bfd *abfd, asection *sec, asection *sym_sec,
 		      struct bfd_link_info *link_info,
 		      Elf_Internal_Rela *rel,
 		      bfd_vma symval,
+		      bfd_boolean is_import,
 		      bfd_boolean *again)
 {
   bfd_byte *contents = elf_section_data (sec)->this_hdr.contents;
@@ -2868,7 +3439,7 @@ _bfd_riscv_relax_lui (bfd *abfd, asection *sec, asection *sym_sec,
   int use_rvc = elf_elfheader (abfd)->e_flags & EF_RISCV_RVC;
 
   /* Mergeable symbols might later move out of range.  */
-  if (sym_sec->flags & SEC_MERGE)
+  if (is_import || (sym_sec->flags & SEC_MERGE))
     return TRUE;
 
   BFD_ASSERT (rel->r_offset + 4 <= sec->size);
@@ -2945,10 +3516,11 @@ _bfd_riscv_relax_tls_le (bfd *abfd, asection *sec,
 			 struct bfd_link_info *link_info,
 			 Elf_Internal_Rela *rel,
 			 bfd_vma symval,
+		         bfd_boolean is_import,
 			 bfd_boolean *again)
 {
   /* See if this symbol is in range of tp.  */
-  if (RISCV_CONST_HIGH_PART (tpoff (link_info, symval)) != 0)
+  if (RISCV_CONST_HIGH_PART (tpoff (link_info, symval)) != 0 || is_import)
     return TRUE;
 
   /* We can delete the unnecessary LUI and tp add.  The LO12 reloc will be
@@ -2968,6 +3540,7 @@ _bfd_riscv_relax_align (bfd *abfd, asection *sec,
 			struct bfd_link_info *link_info ATTRIBUTE_UNUSED,
 			Elf_Internal_Rela *rel,
 			bfd_vma symval,
+		        bfd_boolean is_import ATTRIBUTE_UNUSED,
 			bfd_boolean *again ATTRIBUTE_UNUSED)
 {
   bfd_byte *contents = elf_section_data (sec)->this_hdr.contents;
@@ -3045,6 +3618,7 @@ _bfd_riscv_relax_section (bfd *abfd, asection *sec,
       typeof (&_bfd_riscv_relax_call) relax_func = NULL;
       int type = ELFNN_R_TYPE (rel->r_info);
       bfd_vma symval;
+      bfd_boolean Is_Import = FALSE;
 
       if (info->relax_pass == 0)
 	{
@@ -3121,11 +3695,12 @@ _bfd_riscv_relax_section (bfd *abfd, asection *sec,
 	    symval = sec_addr (h->root.u.def.section) + h->root.u.def.value;
 
 	  sym_sec = h->root.u.def.section;
+ 	  if (h->root.type == bfd_link_hash_defweak && strcmp(sec->name, "pulp.import")) Is_Import = TRUE;
 	}
 
       symval += rel->r_addend;
 
-      if (!relax_func (abfd, sec, sym_sec, info, rel, symval, again))
+      if (!relax_func (abfd, sec, sym_sec, info, rel, symval, Is_Import, again))
 	goto fail;
     }
 
@@ -3136,6 +3711,86 @@ fail:
     free (relocs);
 
   return ret;
+}
+
+bfd_boolean
+_bfd_riscv_elf_final_link (bfd *abfd, struct bfd_link_info *info)
+
+{
+	struct bfd_section *s;
+	unsigned int SecNameSize, SecRelocSize, NImport=0, ExportSize;
+	unsigned int *NameSection, *RelocSection, *ExportSection;
+	static int Trace = 0;
+
+
+	if (!bfd_elf_final_link (abfd, info)) return FALSE;
+
+	if (PulpImportCreateNameAndRelocSections(0,
+						 &NameSection,  &SecNameSize,
+						 &RelocSection, &SecRelocSize, &NImport) == FALSE) {
+      		(*_bfd_error_handler)(_("Failed to create Import sections"));
+		return FALSE;
+	}
+
+
+	if (NImport) {
+
+		if (DumpImportExportSections) DiassembleImports(NameSection, RelocSection);
+
+		s = bfd_get_section_by_name (abfd, ".pulp.import.names");
+		if (s) {
+			s->contents = xmalloc(SecNameSize);
+			s->size = SecNameSize;
+			if (! bfd_set_section_contents (abfd, s, (char *) NameSection, 0, SecNameSize)) {
+      				(*_bfd_error_handler)(_(".pulp.import.names: Failed to set content"));
+	        		return FALSE;
+			} else if (Trace) {
+				fprintf(stderr, ".pulp.import.names: Set content OK\n");
+			}
+		} else {
+      			(*_bfd_error_handler)(_("Can't find .pulp.import.names"));
+	        	return FALSE;
+		}
+		s = bfd_get_section_by_name (abfd, ".pulp.import.relocs");
+		if (s) {
+			s->contents = xmalloc(SecRelocSize);
+			s->size = SecRelocSize;
+			if (! bfd_set_section_contents (abfd, s, (char *) RelocSection, 0, SecRelocSize)) {
+      				(*_bfd_error_handler)(_(".pulp.import.relocs: Failed to set content"));
+	        		return FALSE;
+			} else if (Trace) {
+				fprintf(stderr, ".pulp.import.relocs: Set content OK\n");
+			}
+		} else {
+      			(*_bfd_error_handler)(_("Can't find .pulp.import.relocs"));
+	        	return FALSE;
+		}
+		(void) ReleaseImportEntry();
+	}
+
+	if (PulpExportCreateSection(&ExportSection, &ExportSize, info) == FALSE) {
+      		(*_bfd_error_handler)(_("Failed to create Export Section"));
+		return FALSE;
+	} else if (ExportSection) {
+		if (DumpImportExportSections) DiassembleExports(ExportSection);
+		s = bfd_get_section_by_name (abfd, ".pulp.export");
+		if (s) {
+			s->contents = xmalloc(ExportSize);
+			s->size = ExportSize;
+			if (! bfd_set_section_contents (abfd, s, (char *) ExportSection, 0, ExportSize)) {
+      				(*_bfd_error_handler)(_(".pulp.export: Failed to set content"));
+	        		return FALSE;
+			} else if (Trace) {
+				fprintf(stderr, ".pulp.export: Set content OK\n");
+			}
+		} else {
+      			(*_bfd_error_handler)(_("Can't find .pulp.export"));
+	        	return FALSE;
+		}
+		(void) ReleaseExportEntry();
+	}
+
+	return TRUE;
 }
 
 #define TARGET_LITTLE_SYM		riscv_elfNN_vec
@@ -3165,6 +3820,8 @@ fail:
 #define bfd_elfNN_bfd_relax_section	     _bfd_riscv_relax_section
 
 #define elf_backend_init_index_section	     _bfd_elf_init_1_index_section
+#define bfd_elf32_bfd_final_link	     _bfd_riscv_elf_final_link
+
 
 #define elf_backend_can_gc_sections	1
 #define elf_backend_can_refcount	1

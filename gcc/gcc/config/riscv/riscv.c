@@ -1969,7 +1969,8 @@ printf("----------------------------\n");
 	  {
 	  case SYMBOL_GOT_DISP: return "la\t%0,%1";
 	  case SYMBOL_ABSOLUTE: return "lla\t%0,%1";
-	  case SYMBOL_TINY_ABSOLUTE: return "addi\t%0,x0,%1";
+	  // case SYMBOL_TINY_ABSOLUTE: return "addi\t%0,x0,%1";
+	  case SYMBOL_TINY_ABSOLUTE: return "lla\t%0,%1";
 	  default: gcc_unreachable();
 	  }
     }
@@ -3372,6 +3373,10 @@ static const struct attribute_spec riscv_attribute_table[] =
   /* { name, min_len, max_len, decl_req, type_req, fn_type_req, handler } */
   { "interrupt",      0, 0, false, true,  true,  NULL, true  },
   { "tiny",           0, 0, true,  false, false, NULL, true  },
+  { "import",         0, 0, false, true,  true,  NULL, true  },
+  { "import_var",     0, 0, true,  false, false, NULL, true  },
+  { "export",         0, 0, false, true,  true,  NULL, true  },
+  { "export_var",     0, 0, true,  false, false, NULL, true  },
   { NULL,             0, 0, false, false, false, NULL, false }
 };
 
@@ -3413,6 +3418,7 @@ riscv_is_tiny_symbol_p (rtx addr)
   }
   return false;
 }
+
 
 /* Print symbolic operand OP, which is part of a HIGH or LO_SUM
    in context CONTEXT.  RELOCS is the array of relocations to use.  */
@@ -6441,6 +6447,108 @@ riscv_reorg (void)
   df_finish_pass (false);
 }
 
+typedef struct GTY(()) import_export_symbol
+{
+  tree decl;
+  const char *name;
+} import_export_symbol;
+
+/* Define gc'd vector type for import_export_symbol.  */
+
+/* Vector of import_export_symbol pointers.  */
+static GTY(()) vec<import_export_symbol, va_gc> *import_symbols;
+static GTY(()) vec<import_export_symbol, va_gc> *export_symbols;
+
+static void riscv_globalize_decl_name (FILE * stream, tree decl)
+
+{
+	if (TREE_CODE(decl) == VAR_DECL) {
+		tree attrs;
+		const char *name = XSTR (XEXP (DECL_RTL (decl), 0), 0);
+		attrs = DECL_ATTRIBUTES (decl);
+     		if ((attrs && lookup_attribute ("export_var", attrs))) {
+			import_export_symbol p = {decl, name};
+			// printf("Found Var Decl export on %s\n", name);
+  			vec_safe_push (export_symbols, p);
+		}
+	}
+	default_globalize_decl_name(stream, decl);
+}
+
+void riscv_output_external (FILE *file, tree decl, const char *name)
+
+{
+	gcc_assert (file == asm_out_file);
+	import_export_symbol p = {decl, name};
+	tree attrs;
+
+  	if (decl) {
+
+		attrs = DECL_ATTRIBUTES (decl);
+     		if ((attrs && lookup_attribute ("import_var", attrs))) {
+			// printf("Found Var Decl import on %s\n", name);
+  			vec_safe_push (import_symbols, p);
+		}
+/*
+     		if ((attrs && lookup_attribute ("export_var", attrs))) {
+			printf("Found Var Decl export on %s\n", name);
+		}
+*/
+
+		attrs = TYPE_ATTRIBUTES (TREE_TYPE(decl));
+		if ((attrs && lookup_attribute ("import", attrs))) {
+			// printf("Found Func import on %s\n", name);
+  			vec_safe_push (import_symbols, p);
+		}
+		if ((attrs && lookup_attribute ("export" ,attrs))) {
+			// printf("Found Func export on %s\n", name);
+  			vec_safe_push (export_symbols, p);
+		}
+  	}
+}
+
+static void riscv_file_end (void)
+
+{
+	static int InImportSection=0;
+	static int InExportSection=0;
+	unsigned int i;
+	import_export_symbol *p;
+
+	for (i = 0; vec_safe_iterate (import_symbols, i, &p); i++) {
+		tree decl = p->decl;
+		if (!InImportSection) {
+			fprintf(asm_out_file, "\n\t.section\t.pulp.import,\"aw\",@note\n");
+			InImportSection = 1;
+		}
+		if (SYMBOL_REF_REFERENCED_P (XEXP (DECL_RTL (decl), 0))) {
+			fprintf(asm_out_file, "\t.weak\t%s\n", p->name);
+			fprintf(asm_out_file, "\t.type\t%s, @function\n", p->name);
+			fprintf(asm_out_file, "\t.size\t%s, 4\n", p->name);
+			fprintf(asm_out_file, "%s:\n", p->name);
+			fprintf(asm_out_file, "\t.zero\t4\n");
+		}
+	}
+	for (i = 0; vec_safe_iterate (export_symbols, i, &p); i++) {
+		tree decl = p->decl;
+		if (!InExportSection) {
+			fprintf(asm_out_file, "\n\t.section\t.pulp.export,\"\",@note\n");
+			InExportSection = 1;
+		}
+		fprintf(asm_out_file, "\t.string \"%s\"\n", p->name);
+	}
+	if (InImportSection) {
+		fprintf(asm_out_file, "\t.section\t.pulp.import.names,\"\",@note\n");
+		fprintf(asm_out_file, "\t.align\t2\n");
+		fprintf(asm_out_file, "\t.string \"N\"\n");
+		fprintf(asm_out_file, "\t.section\t.pulp.import.relocs,\"\",@note\n");
+		fprintf(asm_out_file, "\t.align\t2\n");
+		fprintf(asm_out_file, "\t.string \"R\"\n");
+	}
+	vec_free (import_symbols);
+	vec_free (export_symbols);
+
+}
 
 
 
@@ -6619,6 +6727,11 @@ riscv_reorg (void)
 #undef TARGET_VECTORIZE_BUILTIN_VECTORIZATION_COST
 #define TARGET_VECTORIZE_BUILTIN_VECTORIZATION_COST riscv_builtin_vectorization_cost
 
+#undef TARGET_ASM_FILE_END
+#define TARGET_ASM_FILE_END riscv_file_end
+
+#undef TARGET_ASM_GLOBALIZE_DECL_NAME
+#define TARGET_ASM_GLOBALIZE_DECL_NAME riscv_globalize_decl_name
 
 
 

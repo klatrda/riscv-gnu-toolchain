@@ -97,11 +97,15 @@ riscv_elf_before_allocation (void)
 {
 	char CharBuff[1024];
 	bfd *b, *first_b = NULL;
+	bfd *ImportBfd;
 	struct bfd_section *s, *first_s = NULL;
 	struct Pulp_Target_Chip ChipInfo = {PULP_CHIP_NONE, PULP_NONE, -1, -1, -1, -1, -1};
 	struct Pulp_Target_Chip CurChipInfo;
 	int Error = 0;
 	int NoMerge = 0;
+	unsigned int SecNameSize, SecRelocSize, NImport=0, ExportSize;
+	char *ExportNames = NULL;
+
 
 
 	if (TRACE) fprintf(stderr, "Linker Passed Config: %s\n", PulpChipInfoImage(&Pulp_Chip, CharBuff));
@@ -194,92 +198,165 @@ riscv_elf_before_allocation (void)
 		free (data);
 	}
 
- {
-        struct bfd_link_hash_entry *h = NULL;
-
-        h = bfd_link_hash_lookup (link_info.hash, "pulp__PE", TRUE, FALSE, TRUE);
-        lang_update_definedness ("pulp__PE", h);
-        if (NoMerge) h->u.def.value = DefChipInfo.Pulp_PE;
-        else h->u.def.value = ChipInfo.Pulp_PE;
-        h->type = bfd_link_hash_defined; h->u.def.section = abs_output_section->bfd_section;
-
-        h = bfd_link_hash_lookup (link_info.hash, "pulp__FC", TRUE, FALSE, TRUE);
-        lang_update_definedness ("pulp__FC", h);
-        if (NoMerge) h->u.def.value = DefChipInfo.Pulp_FC;
-        else h->u.def.value = ChipInfo.Pulp_FC;
-        h->type = bfd_link_hash_defined; h->u.def.section = abs_output_section->bfd_section;
-
-        h = bfd_link_hash_lookup (link_info.hash, "pulp__L2", TRUE, FALSE, TRUE);
-        lang_update_definedness ("pulp__L2", h);
-        if (NoMerge) h->u.def.value = DefChipInfo.Pulp_L2_Size;
-        else h->u.def.value = ChipInfo.Pulp_L2_Size;
-        h->type = bfd_link_hash_defined; h->u.def.section = abs_output_section->bfd_section;
-
-        h = bfd_link_hash_lookup (link_info.hash, "pulp__L1CL", TRUE, FALSE, TRUE);
-        lang_update_definedness ("pulp__L1CL", h);
-        if (NoMerge) h->u.def.value = DefChipInfo.Pulp_L1_Cluster_Size;
-        else h->u.def.value = ChipInfo.Pulp_L1_Cluster_Size;
-        h->type = bfd_link_hash_defined; h->u.def.section = abs_output_section->bfd_section;
-
-        h = bfd_link_hash_lookup (link_info.hash, "pulp__L1FC", TRUE, FALSE, TRUE);
-        lang_update_definedness ("pulp__L1FC", h);
-        if (NoMerge) h->u.def.value = DefChipInfo.Pulp_L1_FC_Size;
-        else h->u.def.value = ChipInfo.Pulp_L1_FC_Size;
-        h->type = bfd_link_hash_defined; h->u.def.section = abs_output_section->bfd_section;
-
-  }
+	{
+	        struct bfd_link_hash_entry *h = NULL;
+	
+	        h = bfd_link_hash_lookup (link_info.hash, "pulp__PE", TRUE, FALSE, TRUE);
+	        lang_update_definedness ("pulp__PE", h);
+	        if (NoMerge) h->u.def.value = DefChipInfo.Pulp_PE; else h->u.def.value = ChipInfo.Pulp_PE;
+	        h->type = bfd_link_hash_defined; h->u.def.section = abs_output_section->bfd_section;
+	
+	        h = bfd_link_hash_lookup (link_info.hash, "pulp__FC", TRUE, FALSE, TRUE);
+	        lang_update_definedness ("pulp__FC", h);
+	        if (NoMerge) h->u.def.value = DefChipInfo.Pulp_FC; else h->u.def.value = ChipInfo.Pulp_FC;
+	        h->type = bfd_link_hash_defined; h->u.def.section = abs_output_section->bfd_section;
+	
+	        h = bfd_link_hash_lookup (link_info.hash, "pulp__L2", TRUE, FALSE, TRUE);
+	        lang_update_definedness ("pulp__L2", h);
+	        if (NoMerge) h->u.def.value = DefChipInfo.Pulp_L2_Size; else h->u.def.value = ChipInfo.Pulp_L2_Size;
+	        h->type = bfd_link_hash_defined; h->u.def.section = abs_output_section->bfd_section;
+	
+	        h = bfd_link_hash_lookup (link_info.hash, "pulp__L1CL", TRUE, FALSE, TRUE);
+	        lang_update_definedness ("pulp__L1CL", h);
+	        if (NoMerge) h->u.def.value = DefChipInfo.Pulp_L1_Cluster_Size; else h->u.def.value = ChipInfo.Pulp_L1_Cluster_Size;
+	        h->type = bfd_link_hash_defined; h->u.def.section = abs_output_section->bfd_section;
+	
+	        h = bfd_link_hash_lookup (link_info.hash, "pulp__L1FC", TRUE, FALSE, TRUE);
+	        lang_update_definedness ("pulp__L1FC", h);
+	        if (NoMerge) h->u.def.value = DefChipInfo.Pulp_L1_FC_Size; else h->u.def.value = ChipInfo.Pulp_L1_FC_Size;
+	        h->type = bfd_link_hash_defined; h->u.def.section = abs_output_section->bfd_section;
+	
+	}
 
 
-  gld${EMULATION_NAME}_before_allocation ();
+	ExportSize = 0;
+	for (b = link_info.input_bfds; b; b = b->link.next) {
+		if (s = bfd_get_section_by_name (b, ".pulp.export")) {
+			int i;
+			char *Content = xmalloc(s->size);
+			char *Name;
 
-  if (link_info.discard == discard_sec_merge)
-    link_info.discard = discard_l;
+			if (TRACE) fprintf(stderr, "Adding %d bytes to .pulp.export, Total: %d\n", s->size, s->size+ExportSize);
+			ExportSize += (int) s->size;
 
-  /* We always need at least some relaxation to handle code alignment.  */
-  if (RELAXATION_DISABLED_BY_USER)
-    TARGET_ENABLE_RELAXATION;
-  else
-    ENABLE_RELAXATION;
+			bfd_get_section_contents (b, s, Content, 0, s->size);
+			Name = Content;
+			for (i = 0; i<s->size; i++) {
+				if (Content[i] == 0) {
+					InsertExportEntry(Name);
+					Name = Content + i + 1;
+				}
+			}
+			free(Content);
+		}
+	}
+	ExportSize = ExportSectionSize(NULL);
+	if (ExportSize) {
+		if (TRACE) fprintf(stderr, "Final Size of .pulp.export: %d\n", ExportSize);
+		first_s = NULL;
+		for (b = link_info.input_bfds; b; b = b->link.next) {
+			if (s = bfd_get_section_by_name (b, ".pulp.export")) {
+				if (!first_s) {
+					s->flags &= ~(SEC_EXCLUDE|SEC_ALLOC); s->flags |= (SEC_IN_MEMORY|SEC_READONLY);
+					s->size = ExportSize;
+        				s->contents = xmalloc(s->size);
+					first_s = s;
+				} else {
+					s->size = 0; s->flags |= SEC_EXCLUDE;
+				}
+			}
+		}
+	}
 
-  link_info.relax_pass = 2;
+	PulpImportSectionsSize(0, &SecNameSize, &SecRelocSize, &NImport, TRUE);
 
+	if (TRACE) fprintf(stderr, "ELF Before Alloc: Import Name Size: %d, Import Reloc Size: %d, Imports: %d\n",
+				   SecNameSize, SecRelocSize, NImport);
+
+	first_s = NULL;
+	for (b = link_info.input_bfds; b; b = b->link.next) {
+		s = bfd_get_section_by_name (b, ".pulp.import.names");
+		if (s) {
+			if (!first_s) first_s = s;
+			s->size = 0; s->flags |= SEC_EXCLUDE;
+		}
+	}
+	s = first_s;
+	if (s) {
+		s->flags &= ~(SEC_EXCLUDE|SEC_ALLOC); s->flags |= (SEC_IN_MEMORY|SEC_READONLY);
+		s->size = SecNameSize;
+        	s->contents = xmalloc(s->size);
+		if (TRACE) fprintf(stderr, ".pulp.import.names Found\n");
+	} else if (TRACE) fprintf(stderr, ".pulp.import.names NOT Found\n");
+
+	first_s = NULL;
+	for (b = link_info.input_bfds; b; b = b->link.next) {
+		s = bfd_get_section_by_name (b, ".pulp.import.relocs");
+		if (s) {
+			if (!first_s) first_s = s;
+			s->size = 0; s->flags |= SEC_EXCLUDE;
+		}
+	}
+	s = first_s;
+	if (s) {
+		s->flags &= ~(SEC_EXCLUDE|SEC_ALLOC); s->flags |= (SEC_IN_MEMORY|SEC_READONLY);
+		s->size = SecRelocSize;
+        	s->contents = xmalloc(s->size);
+		if (TRACE) fprintf(stderr, ".pulp.import.relocs Found\n");
+	} else if (TRACE) fprintf(stderr, ".pulp.import.relocs NOT Found\n");
+
+
+  	gld${EMULATION_NAME}_before_allocation ();
+
+  	if (link_info.discard == discard_sec_merge) link_info.discard = discard_l;
+
+  	/* We always need at least some relaxation to handle code alignment.  */
+  	if (RELAXATION_DISABLED_BY_USER)
+    		TARGET_ENABLE_RELAXATION;
+  	else
+    		ENABLE_RELAXATION;
+
+  	link_info.relax_pass = 2;
 }
 
 static void
 gld${EMULATION_NAME}_after_allocation (void)
 {
-  int need_layout = 0;
+  	int need_layout = 0;
+	struct bfd_section *s;
+	bfd *b = NULL;
 
-  /* Don't attempt to discard unused .eh_frame sections until the final link,
-     as we can't reliably tell if they're used until after relaxation.  */
-  if (!link_info.relocatable)
-    {
-      need_layout = bfd_elf_discard_info (link_info.output_bfd, &link_info);
-      if (need_layout < 0)
-	{
-	  einfo ("%X%P: .eh_frame/.stab edit: %E\n");
-	  return;
+  	/* Don't attempt to discard unused .eh_frame sections until the final link,
+     	as we can't reliably tell if they're used until after relaxation.  */
+  	if (!link_info.relocatable) {
+      		need_layout = bfd_elf_discard_info (link_info.output_bfd, &link_info);
+      		if (need_layout < 0) {
+	  		einfo ("%X%P: .eh_frame/.stab edit: %E\n");
+	  		return;
+		}
+    	}
+	for (b = link_info.input_bfds; b; b = b->link.next) {
+		s = bfd_get_section_by_name (b, ".pulp.import");
+		if (s) s->flags |= SEC_EXCLUDE;
 	}
-    }
-
-  gld${EMULATION_NAME}_map_segments (need_layout);
+  	gld${EMULATION_NAME}_map_segments (need_layout);
 }
 
 static void
 gld${EMULATION_NAME}_finish (void)
 {
-	struct bfd_section *s;
 
-	s = bfd_get_section_by_name (link_info.output_bfd, ".Pulp_Chip.Info");
-	if (s) {
-		if (TRACE) fprintf(stderr, "Found Chip Info in out bfd: Size=%d, EntSize=%d, Contents:%s\n",
-					    (int) s->size, (int) s->entsize, (s->contents)?"Yes":"No" );
+	if (TRACE) {
+		struct bfd_section *s;
+
+		s = bfd_get_section_by_name (link_info.output_bfd, ".Pulp_Chip.Info");
+		if (s) fprintf(stderr, "Found Chip Info in out bfd: Size=%d, EntSize=%d, Contents:%s\n",
+				       (int) s->size, (int) s->entsize, (s->contents)?"Yes":"No" );
 	}
 
-  if (! link_info.relocatable) {
-  }
-
-  finish_default ();
+	if (! link_info.relocatable) {
+  	}
+  	finish_default ();
 }
 static void ParsePulpArch(const char *arg)
 
@@ -387,6 +464,8 @@ PARSE_AND_LIST_PROLOGUE='
 #define OPTION_L1FC		307
 #define OPTION_WARN_CHIP_INFO	308
 #define OPTION_ERROR_CHIP_INFO	309
+#define OPTION_COMP_LINK	310
+#define OPTION_DUMP_IE_SECT	311
 '
 PARSE_AND_LIST_LONGOPTS='
   { "mchip", required_argument, NULL, OPTION_CHIP},
@@ -398,6 +477,8 @@ PARSE_AND_LIST_LONGOPTS='
   { "mL1Fc", required_argument, NULL, OPTION_L1FC},
   { "mWci", no_argument, NULL, OPTION_WARN_CHIP_INFO},
   { "mEci", no_argument, NULL, OPTION_ERROR_CHIP_INFO},
+  { "mComp", no_argument, NULL, OPTION_COMP_LINK},
+  { "mDIE", no_argument, NULL, OPTION_DUMP_IE_SECT},
 '
 
 PARSE_AND_LIST_OPTIONS='
@@ -410,6 +491,8 @@ PARSE_AND_LIST_OPTIONS='
   fprintf (file, _("  -mL1Fc=<value>      Set targeted Pulp chip L1 fabric controler memry size to <value>\n"));
   fprintf (file, _("  -mWci               Emit warning when no chip info is found in a bfd or when non mergeable chip info sections are detected\n"));
   fprintf (file, _("  -mEci               Emit warning and abort when no chip info is found in a bfd or when non mergeable chip info sections are detected\n"));
+  fprintf (file, _("  -mComp              Link a component, export section contains offset relative to segment and not absolute addresses\n"));
+  fprintf (file, _("  -mDIE               Dump import/export sections\n"));
 '
 
 PARSE_AND_LIST_ARGS_CASES='
@@ -439,7 +522,13 @@ PARSE_AND_LIST_ARGS_CASES='
      break;
    case OPTION_ERROR_CHIP_INFO:
      Error_Chip_Info = 1;
-    break;
+     break;
+   case OPTION_COMP_LINK:
+     ComponentMode = TRUE;
+     break;
+   case OPTION_DUMP_IE_SECT:
+     DumpImportExportSections = TRUE;
+     break;
 '
 
 LDEMUL_AFTER_OPEN=riscv_elf_after_open

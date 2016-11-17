@@ -33,3 +33,20 @@ riscv_reloc_type_lookup (bfd *, bfd_reloc_code_real_type);
 
 extern reloc_howto_type *
 riscv_elf_rtype_to_howto (unsigned int r_type);
+
+extern bfd_boolean ReleaseImportEntry(void);
+extern bfd_boolean PulpImportCreateNameAndRelocSections(int, unsigned int **, unsigned int *,
+                                                 	unsigned int **, unsigned int *, unsigned int *);
+
+extern void PulpImportSectionsSize(int, unsigned int *, unsigned int *, unsigned int *, bfd_boolean);
+
+extern bfd_boolean InsertExportEntry(const char *);
+extern bfd_boolean ReleaseExportEntry(void);
+extern unsigned int ExportSectionSize(unsigned int *);
+
+extern bfd_boolean ComponentMode;
+extern bfd_boolean DumpImportExportSections;
+
+
+
+

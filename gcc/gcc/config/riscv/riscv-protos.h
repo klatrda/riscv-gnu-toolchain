@@ -125,5 +125,8 @@ extern bool riscv_filter_pulp_operand(rtx, bool);
 
 extern bool riscv_is_tiny_symbol_p (rtx addr);
 
+extern void riscv_output_external (FILE *file, tree decl, const char *name);
+
+
 
 #endif /* ! GCC_RISCV_PROTOS_H */
