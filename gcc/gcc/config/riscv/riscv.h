@@ -210,7 +210,7 @@ along with GCC; see the file COPYING3.  If not see
 %{mWci:--mWci} \
 %{mEci:--mEci} \
 %{mComp:--mComp} \
-%{mDIE:--mDIE} \
+%{mDIE=*:--mDIE=%*} \
 %{shared}"
 #endif  /* LINK_SPEC defined */
 

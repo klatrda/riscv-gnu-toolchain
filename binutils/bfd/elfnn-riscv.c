@@ -61,7 +61,7 @@
 bfd_boolean ComponentMode = FALSE;
 
 /*  Linker argumenr -mDIE, to dump import and export sections */
-bfd_boolean DumpImportExportSections = FALSE;
+unsigned int DumpImportExportSections = 0;
 
 
 /* The RISC-V linker needs to keep track of the number of relocs that it
@@ -530,6 +530,17 @@ typedef struct PulpExportEntry {
 static PulpImportEntry * ImportEntries[HASH_IMPORT_E];
 static PulpExportEntry * ExportEntries[HASH_IMPORT_E];
 
+static struct bfd_sym_chain ComponentEntry;
+static bfd_boolean ComponentEntryProvided;
+
+void PulpRegisterSymbolEntry(struct bfd_sym_chain EntrySymb, bfd_boolean EntryOnCmdLine)
+
+{
+	ComponentEntry = EntrySymb;
+	ComponentEntryProvided = EntryOnCmdLine;
+}
+
+
 static unsigned long hash_sdbm(const char *str)
 
 {
@@ -538,6 +549,17 @@ static unsigned long hash_sdbm(const char *str)
 
         while ((c = (*str++))) hash = c + (hash << 6) + (hash << 16) - hash;
         return (hash % HASH_IMPORT_E);
+}
+
+static bfd_boolean ExportLookup(const char *Name)
+
+{
+	unsigned int Index = hash_sdbm(Name);
+	PulpExportEntry *PtEntry = ExportEntries[Index];
+
+	while (PtEntry && (strcmp(PtEntry->Name, Name) != 0)) PtEntry = PtEntry->Next;
+
+	return (PtEntry != NULL);
 }
 
 bfd_boolean InsertExportEntry(const char *Name)
@@ -643,6 +665,11 @@ static bfd_boolean InsertImportEntry(const char *Name, Elf_Internal_Rela *Rel, b
 	Ref->Rel = *Rel; Ref->Next = NULL;
 	Ref->Rel.r_info = ELFNN_R_TYPE(Rel->r_info);
 	Ref->Rel.r_offset = Rel->r_offset + OutOffset;
+/*
+	if (ComponentMode == 0) {
+		Ref->Rel.r_offset += Sec->vma;
+	}
+*/
 	PtRef = PtEntry->Ref;
 	while (PtRef && PtRef->Next != NULL) PtRef = PtRef->Next;
 	if (PtRef) PtRef->Next = Ref; else PtEntry->Ref = Ref;
@@ -679,12 +706,11 @@ Structure of .pulp.import.names Section:
 ----------------------------------------
 
 	Len(Name) = Length(Name)+1 				Null terminated string
-	Size:	(N+1)*4 + Sum(j:1..N){Len(Namej)}		If Type=0
+	Size:	Pad4((N+1)*4 + Sum(j:1..N){Len(Namej)})		If Type=0
 	     	(N+1)*4						If Type=1
 
 		Base						Bit0: 		Section Type: 0 with names, 1 uses pre resolved indexes
-								Bit1:31:	Section size
-										Here we could force section to be a multiple of 4 and save 2 bits
+								Bit1:31:	(Section size) / 4 Always 4 byte aligned
 
 	Type=0 (Names)
 		Base+4						Name1_Index = Base+4*(N+1)
@@ -699,6 +725,7 @@ Structure of .pulp.import.names Section:
 		Base+4*(N+1)+Sum(j:1..(i-1)){Len(Namej)}	Namei	
 		...
 		Base+4*(N+1)+Sum(j:1..(N-1)){Len(Namej)}	NameN	
+		Pad till next address aligned on 4 bytes
 	Type=1 (Pre resolved indexes)
 		Base+4						Name1_Index (points to corresponding name in .export)
 		Base+8						Name2_Index (points to corresponding name in .export)
@@ -749,7 +776,8 @@ Structure of .pulp.export Section:
 
 	Total Size:	Pad4(4 + +Sum(j=1..N){Len(Namej)+1}) + 4*N. Is a multiple of 4
 
-	Base						Bit15:Bit0 	N: Number of exported names
+	Base						Bit0		0: Resident, 1: Component
+							Bit15:Bit1 	N: Number of exported names
 							Bit31:Bit16 	Offset/4 to first Value in this section. /4 since all entities are words
 	Base+4						Section Name1	Section (byte) in which name is defined, Null terminated name
 	Base+4+Len(Name1)				Section Name2
@@ -832,10 +860,13 @@ void PulpImportSectionsSize(int Mode, unsigned int *SecName, unsigned int *SecRe
 			}
 		}
 	}
+	/* Force Names section size to be 4 bytes aligned */
+	if (NameSize%4) NameSize = ((NameSize>>2)+1)<<2;
 	*SecName = NameSize;
 	*SecReloc = RefSize;
 	*N_Import = N_Imp;
 }
+
 
 static bfd_boolean PulpExportCreateSection(unsigned int **Section, unsigned int *SizeSection, struct bfd_link_info *info)
 
@@ -878,6 +909,7 @@ static bfd_boolean PulpExportCreateSection(unsigned int **Section, unsigned int 
 				Entries[Entry++] = h->u.def.value + h->u.def.section->output_offset;
 			else 
 				Entries[Entry++] = h->u.def.value + sec_addr (h->u.def.section);
+				// Entries[Entry++] = h->u.def.value + h->u.def.section->output_offset + h->u.def.section->lma;
 			Base[0] = 0; /* Here should come the section in which the symbol is defined */
 			for (j=0; j<Len; j++)  Base[j+1] = PtEntry->Name[j];
 			Base[j+1] = 0; /* Null termination */
@@ -898,7 +930,7 @@ static bfd_boolean PulpExportCreateSection(unsigned int **Section, unsigned int 
 			BaseI[Entry] = Entries[Entry]; Entry++;
 		}
 	}
-	(*Section)[0] = (Entry&0x0FFFF) | ((BaseLinkedVal>>2) << 16);
+	(*Section)[0] = (ComponentMode&0x01) | ((Entry<<1)&0x0FFFE) | ((BaseLinkedVal>>2) << 16);
 	free(Entries);
 	return TRUE;
 }
@@ -1002,9 +1034,76 @@ bfd_boolean PulpImportCreateNameAndRelocSections(int Mode,
 	return TRUE;
 }
 
-void DiassembleImports(unsigned int *ImportNames, unsigned int *ImportRelocs)
+/* We adjust reloc offset to absolute address when ComponentMode=0, e.g resident mode. In this case we need to add the lma of the text section */
+
+static void AdjustRelocsImport(unsigned int *ImportRelocs, unsigned int SecRelocsSize, unsigned int BaseText)
 
 {
+	unsigned int Addr, N_Import;
+	unsigned int i, j;
+
+	if (ImportRelocs == NULL) return;
+
+	N_Import = (ImportRelocs[0] & 0x0FFF); // ??? >>1;
+	Addr = 4;
+	for (i=0; i<N_Import; i++) {
+		unsigned int Entry = (ImportRelocs[Addr/4] & 0x0FFFF);
+		unsigned int RelCount = (ImportRelocs[Addr/4]>>16) & 0x0FFFF;
+
+		Addr += 4;
+		for (j=0; j<RelCount; j++) {
+			unsigned int Rel = ImportRelocs[Addr/4];
+			unsigned int Offset = (((Rel & 0x0FFFFFFF)<<1)+BaseText)>>1;
+			unsigned int Type = (Rel>>28);
+
+			Rel = (Type<<28) | (Offset & 0x0FFFFFFF);
+			ImportRelocs[Addr/4] = Rel;
+			Addr += 4;
+		}
+	}
+}
+
+static DumpCEquiv(unsigned int *Section, unsigned int Size, unsigned int Elem, char *DeclName)
+
+{
+	unsigned int i;
+	unsigned DeclSize =  Size/Elem;
+	unsigned short *Half = (unsigned short *) Section;
+	unsigned char *Byte = (unsigned char *) Section;
+
+	switch (Elem) {
+		case 1:
+			fprintf(stderr, "unsigned char %s[%d] = {\n\t", DeclName, DeclSize);
+			for (i=0; i<DeclSize; i++) {
+				fprintf(stderr, "0X%X, ", Byte[i]);
+				if (((i+1)%5)==0) fprintf(stderr, "\n\t");
+			}
+			fprintf(stderr, "\n};\n\n");
+			break;
+		case 2:
+			fprintf(stderr, "unsigned short int %s[%d] = {\n\t", DeclName, DeclSize);
+			for (i=0; i<DeclSize; i++) {
+				fprintf(stderr, "0X%X, ", Half[i]);
+				if (((i+1)%5)==0) fprintf(stderr, "\n\t");
+			}
+			fprintf(stderr, "\n};\n\n");
+			break;
+		case 4:
+			fprintf(stderr, "unsigned int %s[%d] = {\n\t", DeclName, DeclSize);
+			for (i=0; i<DeclSize; i++) {
+				fprintf(stderr, "0X%X, ", Section[i]);
+				if (((i+1)%5)==0) fprintf(stderr, "\n\t");
+			}
+			fprintf(stderr, "\n};\n\n");
+			break;
+		default: ;
+	}
+}
+
+void DiassembleImports(unsigned int *ImportNames, unsigned SecNamesSize, unsigned int *ImportRelocs, unsigned int SecRelocsSize, unsigned int BaseText)
+
+{
+	static int RawDump = 0;
 	unsigned int Addr, N_Import;
 	unsigned int i, j;
 	char *Name;
@@ -1030,7 +1129,7 @@ void DiassembleImports(unsigned int *ImportNames, unsigned int *ImportRelocs)
 		Addr = Addr + strlen(Name) + 1; Name = Name + strlen(Name) + 1;
 	}
 
-	fprintf(stderr, "Section: .pulp.import.relocs\n");
+	fprintf(stderr, "Section: .pulp.import.relocs, Mode=%s, BaseText=%X\n", ComponentMode?"Component":"Resident", BaseText);
 	Addr = 0;
 	fprintf(stderr, "%8s  %17s %20s\n", "Offset", "Content", "Comment");
 	fprintf(stderr, "%8x: 0x%15X (Number of Imported Symbols: %d, Section Size: 0x%X)\n",
@@ -1045,18 +1144,36 @@ void DiassembleImports(unsigned int *ImportNames, unsigned int *ImportRelocs)
 		Addr += 4;
 		for (j=0; j<RelCount; j++) {
 			unsigned int Rel = ImportRelocs[Addr/4];
-			unsigned int Offset = (Rel & 0x0FFFFFFF)<<1;
+			unsigned int Offset = ((Rel & 0x0FFFFFFF)<<1);
 			unsigned int Type = (Rel>>28);
 
 			fprintf(stderr, "%8x: 0x%15X (Offset: 0x%6X, Reloc: %s)\n", Addr, ImportRelocs[Addr/4], Offset, RelImage(Type));
 			Addr += 4;
 		}
 	}
+	if (RawDump) {
+		unsigned int NameSize = SecNamesSize>>2, RelocSize = SecRelocsSize>>2;
+		if (SecNamesSize % 4) NameSize++;
+		if (SecRelocsSize % 4) RelocSize++;
+		fprintf(stderr, "unsigned int CompNames[%d] = {\n\t", NameSize);
+		for (i=0; i<NameSize; i++) {
+			fprintf(stderr, "0X%X, ", ImportNames[i]);
+			if (((i+1)%5)==0) fprintf(stderr, "\n\t");
+		}
+		fprintf(stderr, "\n};\n");
+		fprintf(stderr, "unsigned int CompRelocs[%d] = {\n\t", RelocSize);
+		for (i=0; i<RelocSize; i++) {
+			fprintf(stderr, "0X%X, ", ImportRelocs[i]);
+			if (((i+1)%5)==0) fprintf(stderr, "\n\t");
+		}
+		fprintf(stderr, "\n};\n");
+	}
 }
 
-void DiassembleExports(unsigned int *Section)
+void DiassembleExports(unsigned int *Section, unsigned int SectionSize)
 
 {
+	static int RawDump = 0;
 	unsigned int Entry;
 	char *Base;
 	unsigned int *BaseI;
@@ -1066,14 +1183,15 @@ void DiassembleExports(unsigned int *Section)
 	if (Section == NULL) return;
 
 	fprintf(stderr, "Section: .pulp.export\n");
-	Entry = Section[0]&0x0FFFF;
+	Entry = (Section[0]&0x0FFFF)>>1;
 	Base = &Section[1];
 
 	Addr = 0;
 	fprintf(stderr, "%8s  %17s %20s\n", "Offset", "Content", "Comment");
-	fprintf(stderr, "%8x: 0x%15X (Number of Exported Symbols: %d, Base Linker Values: 0x%X, Section Size: 0x%X)\n",
-		Addr, Section[Addr], Section[Addr]&0x0FFFF, ((Section[Addr]>>16)<<2)&0x0FFFF,
-		(Section[Addr]&0x0FFFF)*4 + (((Section[Addr]>>16)<<2)&0x0FFFF));
+	fprintf(stderr, "%8x: 0x%15X (Type: %s, Number of Exported Symbols: %d, Base Linker Values: 0x%X, Section Size: 0x%X)\n",
+		Addr, Section[Addr], (Section[Addr]&0x01)?"Component":"Resident",
+		(Section[Addr]&0x0FFFF)>>1, ((Section[Addr]>>16)<<2)&0x0FFFF,
+		((Section[Addr]&0x0FFFF)>>1)*4 + (((Section[Addr]>>16)<<2)&0x0FFFF));
 	Addr += 4;
 	for (i=0; i<Entry; i++) {
 		unsigned int Off = strlen(Base+1) + 2;
@@ -1089,6 +1207,16 @@ void DiassembleExports(unsigned int *Section)
 	for (i=0; i<Entry; i++) {
 		fprintf(stderr, "%8x: 0x%15X (Exported Symbol %5d, Offset in Section)\n", Addr, BaseI[i], i);
 		Addr+=4;
+	}
+	if (RawDump) {
+		unsigned int Size = SectionSize>>2;
+		if (SectionSize % 4) Size++;
+		fprintf(stderr, "unsigned int ExportSymb[%d] = {\n\t", Size);
+		for (i=0; i<Size; i++) {
+			fprintf(stderr, "0X%X, ", Section[i]);
+			if (((i+1)%5)==0) fprintf(stderr, "\n\t");
+		}
+		fprintf(stderr, "\n};\n");
 	}
 }
 
@@ -2345,7 +2473,7 @@ static void RegisterImportReloc(struct bfd_link_info *info,
 					  h->root.root.string, rel->r_info,
 					  ELFNN_R_TYPE(rel->r_info), howto->name, rel->r_offset, (int) input_section->output_offset,
 					  (int) input_section->output_offset+(int)rel->r_offset);
-			InsertImportEntry(h->root.root.string, rel, input_section->output_offset, FALSE, sec);
+			InsertImportEntry(h->root.root.string, rel, input_section->output_offset, FALSE, input_section);
 		}
 	}
 }
@@ -3734,8 +3862,25 @@ _bfd_riscv_elf_final_link (bfd *abfd, struct bfd_link_info *info)
 
 
 	if (NImport) {
+		struct bfd_section *TextSec = NULL;
+		unsigned int BaseText = 0;
 
-		if (DumpImportExportSections) DiassembleImports(NameSection, RelocSection);
+		if (ComponentMode == 0) {
+			TextSec = bfd_get_section_by_name (info->output_bfd, ".text");
+			if (TextSec) {
+				BaseText = (unsigned int) TextSec->lma;
+				AdjustRelocsImport(RelocSection, SecRelocSize, BaseText);
+			} else {
+      				(*_bfd_error_handler)(_("Failed to find .text section in output_bfd"));
+			}
+		}
+
+		if (DumpImportExportSections==1 || DumpImportExportSections==3)
+			DiassembleImports(NameSection, SecNameSize, RelocSection, SecRelocSize, BaseText);
+		if (DumpImportExportSections==2 || DumpImportExportSections==3) {
+			DumpCEquiv(NameSection, SecNameSize, 4, ComponentMode?"CompImportNames":"ResiImportNames");
+			DumpCEquiv(RelocSection, SecRelocSize, 4, ComponentMode?"CompImportRelocs":"ResiImportRelocs");
+		}
 
 		s = bfd_get_section_by_name (abfd, ".pulp.import.names");
 		if (s) {
@@ -3768,11 +3913,32 @@ _bfd_riscv_elf_final_link (bfd *abfd, struct bfd_link_info *info)
 		(void) ReleaseImportEntry();
 	}
 
+	if (ComponentMode) {
+		if (ComponentEntryProvided == FALSE)
+			(*_bfd_error_handler)(_("No Entry provided for Component"));
+		else if (ExportLookup(ComponentEntry.name) == FALSE)
+			 (*_bfd_error_handler)(_("Component provided entry: %s not found in component export list"), ComponentEntry.name);
+	}
 	if (PulpExportCreateSection(&ExportSection, &ExportSize, info) == FALSE) {
       		(*_bfd_error_handler)(_("Failed to create Export Section"));
 		return FALSE;
 	} else if (ExportSection) {
-		if (DumpImportExportSections) DiassembleExports(ExportSection);
+		if (DumpImportExportSections==1 || DumpImportExportSections==3)
+			DiassembleExports(ExportSection, ExportSize);
+		if (DumpImportExportSections==1 || DumpImportExportSections==2) {
+			DumpCEquiv(ExportSection, ExportSize, 4, ComponentMode?"CompExports":"ResiExports");
+			if (ComponentMode) {
+				struct bfd_section *CompSec = NULL;
+				CompSec = bfd_get_section_by_name (info->output_bfd, ".component.body");
+				if (CompSec) {
+					long Size = CompSec->size;
+					char *Buffer = xmalloc (Size);
+					bfd_get_section_contents (info->output_bfd, CompSec, Buffer, 0, Size);
+					DumpCEquiv(Buffer, Size, 1, "ComponentBody");
+					free(Buffer);
+				}
+			}
+		}
 		s = bfd_get_section_by_name (abfd, ".pulp.export");
 		if (s) {
 			s->contents = xmalloc(ExportSize);
@@ -3788,6 +3954,9 @@ _bfd_riscv_elf_final_link (bfd *abfd, struct bfd_link_info *info)
 	        	return FALSE;
 		}
 		(void) ReleaseExportEntry();
+	} else if (ComponentMode) {
+		/* We should have at least on export to be able to enter the coponent */
+		(*_bfd_error_handler)(_("Component has empty export section"));
 	}
 
 	return TRUE;

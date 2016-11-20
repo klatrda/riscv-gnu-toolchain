@@ -268,7 +268,7 @@ mComp
 Target Var(LINK_COMP)
 Link in component mode
 
-mDIE
-Target Var(LINK_DUMP_IE_SECT)
-Dump content of import and export sections
+mDIE=
+Target RejectNegative Joined UInteger Var(LINK_DUMP_IE_SECT) Init(0)
+Dump content of import and export sections, 0: no dump, 1 dump only, 2 C equiv, 3 dump and C equiv
 

@@ -44,8 +44,10 @@ extern bfd_boolean InsertExportEntry(const char *);
 extern bfd_boolean ReleaseExportEntry(void);
 extern unsigned int ExportSectionSize(unsigned int *);
 
+extern void PulpRegisterSymbolEntry(struct bfd_sym_chain, bfd_boolean);
+
 extern bfd_boolean ComponentMode;
-extern bfd_boolean DumpImportExportSections;
+extern unsigned int DumpImportExportSections;
 
 
 

@@ -340,6 +340,7 @@ gld${EMULATION_NAME}_after_allocation (void)
 		if (s) s->flags |= SEC_EXCLUDE;
 	}
   	gld${EMULATION_NAME}_map_segments (need_layout);
+	PulpRegisterSymbolEntry(entry_symbol, entry_from_cmdline);
 }
 
 static void
@@ -478,7 +479,7 @@ PARSE_AND_LIST_LONGOPTS='
   { "mWci", no_argument, NULL, OPTION_WARN_CHIP_INFO},
   { "mEci", no_argument, NULL, OPTION_ERROR_CHIP_INFO},
   { "mComp", no_argument, NULL, OPTION_COMP_LINK},
-  { "mDIE", no_argument, NULL, OPTION_DUMP_IE_SECT},
+  { "mDIE", required_argument, NULL, OPTION_DUMP_IE_SECT},
 '
 
 PARSE_AND_LIST_OPTIONS='
@@ -492,7 +493,7 @@ PARSE_AND_LIST_OPTIONS='
   fprintf (file, _("  -mWci               Emit warning when no chip info is found in a bfd or when non mergeable chip info sections are detected\n"));
   fprintf (file, _("  -mEci               Emit warning and abort when no chip info is found in a bfd or when non mergeable chip info sections are detected\n"));
   fprintf (file, _("  -mComp              Link a component, export section contains offset relative to segment and not absolute addresses\n"));
-  fprintf (file, _("  -mDIE               Dump import/export sections\n"));
+  fprintf (file, _("  -mDIE=<value>       Dump import/export sections. 1: Dump only, 2: Sections in C only, 3: Both\n"));
 '
 
 PARSE_AND_LIST_ARGS_CASES='
@@ -527,7 +528,7 @@ PARSE_AND_LIST_ARGS_CASES='
      ComponentMode = TRUE;
      break;
    case OPTION_DUMP_IE_SECT:
-     DumpImportExportSections = TRUE;
+     DumpImportExportSections = atoi(optarg);
      break;
 '
 
