@@ -2214,7 +2214,8 @@ perform_relocation (const reloc_howto_type *howto,
 		    bfd_vma value,
 		    asection *input_section,
 		    bfd *input_bfd,
-		    bfd_byte *contents)
+		    bfd_byte *contents,
+		    bfd_boolean IsImport)
 {
   if (howto->pc_relative)
     value -= sec_addr (input_section) + rel->r_offset;
@@ -2272,8 +2273,7 @@ perform_relocation (const reloc_howto_type *howto,
       break;
 
     case R_RISCV_JAL:
-      if (!VALID_UJTYPE_IMM (value))
-	return bfd_reloc_overflow;
+      if (!IsImport && !VALID_UJTYPE_IMM (value)) return bfd_reloc_overflow;
       value = ENCODE_UJTYPE_IMM (value);
       break;
 
@@ -2436,14 +2436,14 @@ riscv_resolve_pcrel_lo_relocs (riscv_pcrel_relocs *p)
 		  input_bfd, r->input_section, r->reloc->r_offset));
 
       perform_relocation (r->howto, r->reloc, entry->value, r->input_section,
-			  input_bfd, r->contents);
+			  input_bfd, r->contents, FALSE);
     }
 
   return TRUE;
 }
 
 
-static void RegisterImportReloc(struct bfd_link_info *info,
+static bfd_boolean RegisterImportReloc(struct bfd_link_info *info,
 			 	bfd *input_bfd,
 			 	asection *input_section,
 				bfd_vma pc,
@@ -2457,7 +2457,7 @@ static void RegisterImportReloc(struct bfd_link_info *info,
 	struct elf_link_hash_entry *h;
 	asection *sec;
 
-	if (sym_hashes == NULL) return;
+	if (sym_hashes == NULL) return FALSE;
 
       	/* It seems this can happen with erroneous or unsupported input (mixing a.out and elf in an archive, for example.)  */	
 	h = sym_hashes[r_symndx - symtab_hdr->sh_info];		
@@ -2477,8 +2477,10 @@ static void RegisterImportReloc(struct bfd_link_info *info,
 					  ELFNN_R_TYPE(rel->r_info), howto->name, rel->r_offset, (int) input_section->output_offset,
 					  (int) input_section->output_offset+(int)rel->r_offset);
 			InsertImportEntry(h->root.root.string, rel, input_section->output_offset, FALSE, input_section);
+			return TRUE;
 		}
 	}
+	return FALSE;
 }
 
 /* Relocate a RISC-V ELF section.
@@ -2540,7 +2542,7 @@ riscv_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
       bfd_reloc_status_type r = bfd_reloc_ok;
       const char *name;
       bfd_vma off, ie_off;
-      bfd_boolean unresolved_reloc, is_ie = FALSE;
+      bfd_boolean unresolved_reloc, is_ie = FALSE, IsImport = FALSE;
       bfd_vma pc = sec_addr (input_section) + rel->r_offset;
       int r_type = ELFNN_R_TYPE (rel->r_info), tls_type;
       reloc_howto_type *howto = riscv_elf_rtype_to_howto (r_type);
@@ -2566,7 +2568,7 @@ riscv_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 	  static int OPT=1;
 	  bfd_boolean warned, ignored;
 
- 	  if (OPT) RegisterImportReloc(info, input_bfd, input_section, pc, rel, r_symndx, symtab_hdr, sym_hashes, howto);
+ 	  if (OPT) IsImport = RegisterImportReloc(info, input_bfd, input_section, pc, rel, r_symndx, symtab_hdr, sym_hashes, howto);
 
 	  RELOC_FOR_GLOBAL_SYMBOL (info, input_bfd, input_section, rel,
 				   r_symndx, symtab_hdr, sym_hashes,
@@ -3007,7 +3009,7 @@ riscv_elf_relocate_section (bfd *output_bfd, struct bfd_link_info *info,
 
       if (r == bfd_reloc_ok)
 	r = perform_relocation (howto, rel, relocation, input_section,
-				input_bfd, contents);
+				input_bfd, contents, IsImport);
 
       switch (r)
 	{
