@@ -573,6 +573,7 @@ bfd_boolean InsertExportEntry(const char *Name)
 		PtPrevEntry = PtEntry; PtEntry = PtEntry->Next;
 	}
 	if (PtEntry == NULL) {
+  		struct bfd_link_hash_entry *h;
 		PtEntry = (PulpExportEntry *) bfd_malloc (sizeof (PulpExportEntry));
 		if (PtEntry == NULL) return FALSE;
 		PtEntry->Name = (char *) bfd_malloc (sizeof (char) * strlen(Name));
@@ -1286,6 +1287,7 @@ riscv_elf_check_relocs (bfd *abfd, struct bfd_link_info *info,
                                 	  h->root.root.string, rel->r_info,
                                 	  ELFNN_R_TYPE(rel->r_info), howto->name, (int) rel->r_offset, (int) sec->output_offset,
                                 	  (int) sec->output_offset+(int)rel->r_offset);
+			sec->flags |= SEC_KEEP;
                         InsertImportEntry(h->root.root.string, rel, sec->output_offset, TRUE, sec);
                 }
 
@@ -2469,6 +2471,7 @@ static void RegisterImportReloc(struct bfd_link_info *info,
 		sec = h->root.u.def.section;
 		if (sec != NULL && sec->output_section != NULL && (strcmp(sec->name, ".pulp.import")==0)) {
 			static int Trace = 0;
+			sec->flags |= SEC_KEEP;
 			if (Trace) printf("    Importing %15s in reloc: %4d -> %4d:%22s, at offset: (%8X + %8X) => %X\n",
 					  h->root.root.string, rel->r_info,
 					  ELFNN_R_TYPE(rel->r_info), howto->name, rel->r_offset, (int) input_section->output_offset,
@@ -3491,6 +3494,7 @@ _bfd_riscv_relax_call (bfd *abfd, asection *sec, asection *sym_sec,
   jalr = bfd_get_32 (abfd, contents + rel->r_offset + 4);
   rd = (jalr >> OP_SH_RD) & OP_MASK_RD;
   rvc = rvc && VALID_RVC_J_IMM (foff) && ARCH_SIZE == 32;
+  rvc = rvc &&!is_import;
 
   if (rvc && (rd == 0 || rd == X_RA))
     {
@@ -3499,7 +3503,7 @@ _bfd_riscv_relax_call (bfd *abfd, asection *sec, asection *sym_sec,
       auipc = rd == 0 ? MATCH_C_J : MATCH_C_JAL;
       len = 2;
     }
-  else if (VALID_UJTYPE_IMM (foff))
+  else if (VALID_UJTYPE_IMM (foff) || is_import)
     {
       /* Relax to JAL rd, addr.  */
       r_type = R_RISCV_JAL;

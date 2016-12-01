@@ -40,7 +40,32 @@ static void
 riscv_elf_after_open(void)
 
 {
+	bfd *b;
+	struct bfd_section *s;
+
   	gld${EMULATION_NAME}_after_open ();
+
+	for (b = link_info.input_bfds; b; b = b->link.next) {
+		if (s = bfd_get_section_by_name (b, ".pulp.export")) {
+			int i;
+			char *Content = xmalloc(s->size);
+			char *Name;
+
+			bfd_get_section_contents (b, s, Content, 0, s->size);
+			Name = Content;
+			for (i = 0; i<s->size; i++) {
+				if (Content[i] == 0) {
+					struct bfd_link_hash_entry *h;
+
+					h = bfd_link_hash_lookup (link_info.hash, Name, FALSE, FALSE, TRUE);
+					if (h)  h->u.def.section->flags |= SEC_KEEP;
+
+					Name = Content + i + 1;
+				}
+			}
+			free(Content);
+		}
+	}
 }
 
 #define PULPINFO_NAME "Pulp_Info"
