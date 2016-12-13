@@ -79,6 +79,11 @@
   UNSPEC_SPR_WRITE
   UNSPEC_SPR_BIT_SET
   UNSPEC_SPR_BIT_CLR
+
+  UNSPEC_ITU
+  UNSPEC_ITS
+  UNSPEC_ITH
+  UNSPEC_ITM
 ])
 
 (define_constants
@@ -6112,6 +6117,33 @@
   [(set_attr "type"	"jump")
    (set_attr "mode"	"none")])
 
+(define_insn "simple_itu_return"
+  [(unspec [(return)] UNSPEC_ITU)]
+  ""
+  "uret"
+  [(set_attr "type"	"jump")
+   (set_attr "mode"	"none")])
+
+(define_insn "simple_its_return"
+  [(unspec [(return)] UNSPEC_ITS)]
+  ""
+  "sret"
+  [(set_attr "type"	"jump")
+   (set_attr "mode"	"none")])
+
+(define_insn "simple_ith_return"
+  [(unspec [(return)] UNSPEC_ITH)]
+  "(Pulp_Cpu>=PULP_V2)"
+  "hret"
+  [(set_attr "type"	"jump")
+   (set_attr "mode"	"none")])
+
+(define_insn "simple_itm_return"
+  [(unspec [(return)] UNSPEC_ITM)]
+  ""
+  "mret"
+  [(set_attr "type"	"jump")
+   (set_attr "mode"	"none")])
 
 ;; This is used in compiling the unwind routines.
 (define_expand "eh_return"

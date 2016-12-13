@@ -224,7 +224,7 @@ struct GTY(())  riscv_frame_info {
 
   /* The offset of arg_pointer_rtx from the bottom of the frame.  */
   HOST_WIDE_INT arg_pointer_offset;
-  bool is_it;
+  unsigned int is_it;
 };
 
 struct GTY(())  machine_function {
@@ -239,8 +239,8 @@ struct GTY(())  machine_function {
   struct riscv_frame_info frame;
 
   int has_hardware_loops; // Notify doloop pass that at least 1 hw loop has been created
-  int is_interrupt;
-  int is_pure_interrupt;
+  unsigned int is_interrupt;
+  unsigned int is_pure_interrupt;
   int contains_call;
 
 };
@@ -3372,6 +3372,10 @@ static const struct attribute_spec riscv_attribute_table[] =
 {
   /* { name, min_len, max_len, decl_req, type_req, fn_type_req, handler } */
   { "interrupt",      0, 0, false, true,  true,  NULL, true  },
+  { "Uinterrupt",     0, 0, false, true,  true,  NULL, true  },
+  { "Sinterrupt",     0, 0, false, true,  true,  NULL, true  },
+  { "Hinterrupt",     0, 0, false, true,  true,  NULL, true  },
+  { "Minterrupt",     0, 0, false, true,  true,  NULL, true  },
   { "tiny",           0, 0, true,  false, false, NULL, true  },
   { "import",         0, 0, false, true,  true,  NULL, true  },
   { "import_var",     0, 0, true,  false, false, NULL, true  },
@@ -3770,7 +3774,7 @@ static int scan_reg_definitions(int regno)
 /* Return true if the current function must save register REGNO.  */
 
 static bool
-riscv_save_reg_p (unsigned int regno, bool is_it)
+riscv_save_reg_p (unsigned int regno, unsigned int is_it)
 {
   bool call_saved = !global_regs[regno] && !call_really_used_regs[regno];
   bool might_clobber = crtl->saves_all_registers
@@ -3860,7 +3864,7 @@ riscv_compute_frame_info (void)
   frame->is_it = cfun->machine->is_interrupt;
   if (Trace) fprintf(stderr, "- %30s ----FRAME INFOS---------------------\n", current_function_name());
 
-  if (Trace) fprintf(stderr, "Setting up frame info, is_it: %s\n", frame->is_it?"Yes":"No");
+  if (Trace) fprintf(stderr, "Setting up frame info, is_it: %s (%X)\n", frame->is_it?"Yes":"No", frame->is_it);
   /* Find out which GPRs we need to save.  */
   for (regno = GP_REG_FIRST; regno <= GP_REG_LAST; regno++)
     if (riscv_save_reg_p (regno, frame->is_it)) {
@@ -4261,7 +4265,13 @@ riscv_set_current_function (tree decl)
         cfun->machine->is_interrupt = 0;
         if (decl) {
                 attrs = TYPE_ATTRIBUTES (TREE_TYPE(decl));
-                if ((attrs && lookup_attribute ("interrupt", attrs))) {
+                if ((attrs && (
+				lookup_attribute ("interrupt", attrs) ||
+				lookup_attribute ("Uinterrupt", attrs) ||
+				lookup_attribute ("Sinterrupt", attrs) ||
+				lookup_attribute ("Hinterrupt", attrs) ||
+				lookup_attribute ("Minterrupt", attrs)
+			      ))) {
 			tree function_type;
 
 			if (DECL_DECLARED_INLINE_P (decl))
@@ -4278,7 +4288,13 @@ riscv_set_current_function (tree decl)
           		        || TREE_CHAIN (TYPE_ARG_TYPES (function_type)) != NULL_TREE))
     				error ("interrupt function must have no arguments");
 
-			cfun->machine->is_interrupt = 1;
+ 			cfun->machine->is_interrupt = 1;
+  			if (Pulp_Cpu>=PULP_V2) {
+				if (lookup_attribute ("Uinterrupt", attrs)) cfun->machine->is_interrupt |= 0x2;
+				if (lookup_attribute ("Sinterrupt", attrs)) cfun->machine->is_interrupt |= 0x4;
+				if (lookup_attribute ("Hinterrupt", attrs)) cfun->machine->is_interrupt |= 0x8;
+				if (lookup_attribute ("Minterrupt", attrs)) cfun->machine->is_interrupt |= 0x10;
+			}
 		}
         } else return;
 
@@ -4335,10 +4351,14 @@ riscv_expand_epilogue (bool sibcall_p)
 
   if (!sibcall_p && riscv_can_use_return_insn ())
     {
-      if (frame->is_it)
-        emit_jump_insn (gen_simple_it_return ());
-      else
-        emit_jump_insn (gen_return ());
+      if (frame->is_it) {
+  	// if (Pulp_Cpu>=PULP_V2) {
+		if      (frame->is_it & 0x2) emit_jump_insn (gen_simple_itu_return ());
+		else if (frame->is_it & 0x4) emit_jump_insn (gen_simple_its_return ());
+		else if (frame->is_it & 0x8) emit_jump_insn (gen_simple_ith_return ());
+		else  emit_jump_insn (gen_simple_itm_return ());
+	// } else emit_jump_insn (gen_simple_it_return ());
+      } else emit_jump_insn (gen_return ());
       return;
     }
 
@@ -4408,10 +4428,14 @@ riscv_expand_epilogue (bool sibcall_p)
     emit_insn (gen_add3_insn (stack_pointer_rtx, stack_pointer_rtx,
 			      EH_RETURN_STACKADJ_RTX));
   if (!sibcall_p) {
-      if (frame->is_it)
-        emit_jump_insn (gen_simple_it_return ());
-      else
-        emit_jump_insn (gen_simple_return_internal (ra));
+      if (frame->is_it) {
+  	// if (Pulp_Cpu>=PULP_V2) {
+		if      (frame->is_it & 0x2) emit_jump_insn (gen_simple_itu_return ());
+		else if (frame->is_it & 0x4) emit_jump_insn (gen_simple_its_return ());
+		else if (frame->is_it & 0x8) emit_jump_insn (gen_simple_ith_return ());
+		else  emit_jump_insn (gen_simple_itm_return ());
+	// } else emit_jump_insn (gen_simple_it_return ());
+      } else emit_jump_insn (gen_simple_return_internal (ra));
   }
 }
 
@@ -4436,7 +4460,7 @@ riscv_init_expanders (void)
 bool
 riscv_can_use_return_insn (void)
 {
-  return reload_completed && cfun->machine->frame.total_size == 0;
+  return reload_completed && (cfun->machine->frame.total_size == 0) && (cfun->machine->is_interrupt == 0);
 }
 
 /* Return true if register REGNO can store a value of mode MODE.
@@ -4826,7 +4850,8 @@ static int CheckBuiltin(int Code, int BuiltinIndex, struct ExtraBuiltinImmArg *E
 		case PULP_BUILTIN_CoreId:
 			ExtraImmArg->Count = 1;
 			ExtraImmArg->IsReg[0] = 0;
-			ExtraImmArg->Value[0] = 0xF10;
+			if (Pulp_Cpu>=PULP_V2) ExtraImmArg->Value[0] = 0xF14;
+			else ExtraImmArg->Value[0] = 0xF10;
 			ExtraImmArg->PostExtract.Yes = 1; ExtraImmArg->PostExtract.Size = 5;
 			ExtraImmArg->PostExtract.Off = 0; ExtraImmArg->PostExtract.Sign = 0;
 			Op[0] = gen_rtx_CONST_INT(SImode, ExtraImmArg->Value[0]);
@@ -4834,7 +4859,8 @@ static int CheckBuiltin(int Code, int BuiltinIndex, struct ExtraBuiltinImmArg *E
 		case PULP_BUILTIN_ClusterId:
 			ExtraImmArg->Count = 1;
 			ExtraImmArg->IsReg[0] = 0;
-			ExtraImmArg->Value[0] = 0xF10;
+			if (Pulp_Cpu>=PULP_V2) ExtraImmArg->Value[0] = 0xF14;
+			else ExtraImmArg->Value[0] = 0xF10;
 			ExtraImmArg->PostExtract.Yes = 1; ExtraImmArg->PostExtract.Size = 6;
 			ExtraImmArg->PostExtract.Off = 5; ExtraImmArg->PostExtract.Sign = 0;
 			Op[0] = gen_rtx_CONST_INT(SImode, ExtraImmArg->Value[0]);
@@ -4842,7 +4868,8 @@ static int CheckBuiltin(int Code, int BuiltinIndex, struct ExtraBuiltinImmArg *E
 		case PULP_BUILTIN_IsFc:
 			ExtraImmArg->Count = 1;
 			ExtraImmArg->IsReg[0] = 0;
-			ExtraImmArg->Value[0] = 0xF10;
+			if (Pulp_Cpu>=PULP_V2) ExtraImmArg->Value[0] = 0xF14;
+			else ExtraImmArg->Value[0] = 0xF10;
 			ExtraImmArg->PostExtract.Yes = 1; ExtraImmArg->PostExtract.Size = 1;
 			ExtraImmArg->PostExtract.Off = 10; ExtraImmArg->PostExtract.Sign = 1;
 			Op[0] = gen_rtx_CONST_INT(SImode, ExtraImmArg->Value[0]);

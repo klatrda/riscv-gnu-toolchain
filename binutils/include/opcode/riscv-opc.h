@@ -1080,6 +1080,17 @@
 #define MASK_BEQM1  0x707f
 #define MASK_BNEM1  0x707f
 
+/* Pulpv2 and higher, new opcode for uret,sret,hret and mret */
+
+#define	MATCH_V19_URET	0x00200073
+#define	MATCH_V19_SRET	0x10200073
+#define	MATCH_V19_HRET	0x20200073
+#define	MATCH_V19_MRET	0x30200073
+#define MASK_V19_USHM	0xFFFFFFFF
+
+#define MATCH_V19_WFI 0x10500073
+#define MASK_V19_WFI  0xffffffff
+
 #endif
 #ifdef DECLARE_INSN
 DECLARE_INSN(slli_rv32, MATCH_SLLI_RV32, MASK_SLLI_RV32)

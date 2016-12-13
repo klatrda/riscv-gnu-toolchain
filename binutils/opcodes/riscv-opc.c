@@ -614,12 +614,20 @@ const struct riscv_opcode riscv_builtin_opcodes[] =
 {"csrrwi",    "I",   "d,E,Z",  MATCH_CSRRWI, MASK_CSRRWI, match_opcode,  WR_xd|RD_xs1 },
 {"csrrsi",    "I",   "d,E,Z",  MATCH_CSRRSI, MASK_CSRRSI, match_opcode,  WR_xd|RD_xs1 },
 {"csrrci",    "I",   "d,E,Z",  MATCH_CSRRCI, MASK_CSRRCI, match_opcode,  WR_xd|RD_xs1 },
-{"eret",      "I",   "",     MATCH_SRET, MASK_SRET, match_opcode,  0 },
-{"sret",      "I",   "",     MATCH_SRET, MASK_SRET, match_opcode,  0 },
 {"mrts",      "I",   "",     MATCH_MRTS, MASK_MRTS, match_opcode,  0 },
 {"sfence.vm", "I",   "",     MATCH_SFENCE_VM, MASK_SFENCE_VM | MASK_RS1, match_opcode,  0 },
 {"sfence.vm", "I",   "s",    MATCH_SFENCE_VM, MASK_SFENCE_VM, match_opcode,  RD_xs1 },
+/* V1.7 Supervisor Instructions, Deprecated now, impact pulpv0 and pulpv1
+{"eret",      "I",   "",     MATCH_SRET, MASK_SRET, match_opcode,  0 },
+{"sret",      "I",   "",     MATCH_SRET, MASK_SRET, match_opcode,  0 },
 {"wfi",       "I",   "",     MATCH_WFI, MASK_WFI, match_opcode,  0 },
+*/
+/* V1.9 Supervisor Instructions */
+{"uret",      "I",   "",     MATCH_V19_URET, MASK_V19_USHM, match_opcode,  0 },
+{"sret",      "I",   "",     MATCH_V19_SRET, MASK_V19_USHM, match_opcode,  0 },
+{"hret",      "I",   "",     MATCH_V19_HRET, MASK_V19_USHM, match_opcode,  0 },
+{"mret",      "I",   "",     MATCH_V19_MRET, MASK_V19_USHM, match_opcode,  0 },
+{"wfi",       "I",   "",     MATCH_V19_WFI, MASK_V19_WFI, match_opcode,  0 },
 
 
 /* PULP specific opcodes */

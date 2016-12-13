@@ -705,13 +705,16 @@ N imported symbols
 
 Structure of .pulp.import.names Section:
 ----------------------------------------
-
+We use only Type 0
 	Len(Name) = Length(Name)+1 				Null terminated string
 	Size:	Pad4((N+1)*4 + Sum(j:1..N){Len(Namej)})		If Type=0
 	     	(N+1)*4						If Type=1
 
 		Base						Bit0: 		Section Type: 0 with names, 1 uses pre resolved indexes
 								Bit1:31:	(Section size) / 4 Always 4 byte aligned
+
+		Base						Bit  0:11 	NumberOfImports
+								Bit 12:31 	(Size of Names Section) / 4.
 
 	Type=0 (Names)
 		Base+4						Name1_Index = Base+4*(N+1)
@@ -963,7 +966,9 @@ bfd_boolean PulpImportCreateNameAndRelocSections(int Mode,
 	*S_Reloc = SecReloc; *S_RelocSize = SecRelocSize;
 
 	if (SecName == NULL || SecReloc == NULL) return FALSE;
-	SecName[0]  = (Mode&0x1) | ((SecNameSize)<<1);
+	// SecName[0]  = (Mode&0x1) | ((SecNameSize)<<1);
+
+	SecName[0] = (N_Import&0x0FFF) | ((SecNameSize>>2)<<12);
 	HeadName = (1 + N_Import)*4;
 
 	if (Trace) fprintf(stderr, "Names: Size: %d, Relocs: Size: %d, N Imports: %d, Head Strings: %X\n", SecNameSize, SecRelocSize, N_Import, HeadName*4);
@@ -1117,8 +1122,8 @@ void DiassembleImports(unsigned int *ImportNames, unsigned SecNamesSize, unsigne
 	fprintf(stderr, "Section: .pulp.import.names\n");
 	Addr = 0;
 	fprintf(stderr, "%8s  %17s %20s\n", "Offset", "Content", "Comment");
-	fprintf(stderr, "%8x: 0x%15X (Mode = %1d, Section Size: 0x%X)\n",
-		Addr, ImportNames[Addr/4], ImportNames[Addr/4]&0x01, (ImportNames[Addr/4]>>1));
+	fprintf(stderr, "%8x: 0x%15X (NImport = %d, Section Size: 0x%X)\n",
+		Addr, ImportNames[Addr/4], ImportNames[Addr/4]&0x0FFF, (ImportNames[Addr/4]>>12)*4);
 	Addr += 4;
 	Name = (char *) &ImportNames[1];
 	for (i=0; i<N_Import; i++) {
