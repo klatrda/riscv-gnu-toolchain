@@ -3718,6 +3718,67 @@ _bfd_riscv_relax_align (bfd *abfd, asection *sec,
 				   rel->r_addend - nop_bytes);
 }
 
+static bfd_boolean
+_bfd_riscv_relax_import_pcrel (bfd *abfd, asection *sec,
+			asection *sym_sec,
+			struct bfd_link_info *link_info,
+			Elf_Internal_Rela *rel,
+			bfd_vma symval,
+		        bfd_boolean is_import,
+			bfd_boolean *again)
+
+{
+  bfd_byte *contents = elf_section_data (sec)->this_hdr.contents;
+
+  if (is_import) {
+      	unsigned sym = ELFNN_R_SYM (rel->r_info);
+  	switch (ELFNN_R_TYPE (rel->r_info)) {
+		case R_RISCV_PCREL_LO12_I:
+	  		rel->r_info = ELFNN_R_INFO (sym, R_RISCV_LO12_I);
+	  		return TRUE;
+		case R_RISCV_PCREL_HI20:
+			{
+      				bfd_vma lui = bfd_get_32 (abfd, contents + rel->r_offset);
+      				lui = (lui & (OP_MASK_RD << OP_SH_RD)) | MATCH_LUI;
+      				bfd_put_32 (abfd, lui, contents + rel->r_offset);
+	  			rel->r_info = ELFNN_R_INFO (sym, R_RISCV_HI20);
+				/*
+					PCREL_HI20 is always followed by a reloc on the lsp part of the symbol, we use
+					this assumption to force the reloc to pseudo absolute
+				*/
+				(rel+1)->r_info = ELFNN_R_INFO(sym, R_RISCV_LO12_I);
+			}
+	  		return TRUE;
+   	}
+  }
+  *again = FALSE;
+  return TRUE;
+}
+
+static bfd_boolean
+_bfd_riscv_relax_got_ref (bfd *abfd, asection *sec,
+			asection *sym_sec,
+			struct bfd_link_info *link_info,
+			Elf_Internal_Rela *rel,
+			bfd_vma symval,
+		        bfd_boolean is_import,
+			bfd_boolean *again)
+
+{
+  bfd_byte *contents = elf_section_data (sec)->this_hdr.contents;
+  unsigned sym = ELFNN_R_SYM (rel->r_info);
+  Elf_Internal_Rela *low_part_rel = rel + 1;
+  bfd_vma low_part_ref;
+
+  rel->r_info = ELFNN_R_INFO (sym, R_RISCV_PCREL_HI20);
+  /* Force second part of the access to be an addi instead of the usual load got */
+  low_part_ref = bfd_get_32 (abfd, contents + low_part_rel->r_offset);
+  low_part_ref = (low_part_ref & ((OP_MASK_RD << OP_SH_RD) | (OP_MASK_RS1 << OP_SH_RS1))) | MATCH_ADDI;
+  bfd_put_32 (abfd, low_part_ref, contents + low_part_rel->r_offset);
+
+  sym = ELFNN_R_SYM(low_part_rel->r_info);
+  low_part_rel->r_info = ELFNN_R_INFO (sym, R_RISCV_PCREL_LO12_I);
+}
 /* Relax a section.  Pass 0 shortens code sequences unless disabled.
    Pass 1, which cannot be disabled, handles code alignment directives.  */
 
@@ -3769,11 +3830,15 @@ _bfd_riscv_relax_section (bfd *abfd, asection *sec,
 	    relax_func = _bfd_riscv_relax_lui;
 	  else if (type == R_RISCV_TPREL_HI20 || type == R_RISCV_TPREL_ADD)
 	    relax_func = _bfd_riscv_relax_tls_le;
+	  else if (type == R_RISCV_PCREL_HI20 || type == R_RISCV_PCREL_LO12_I)
+	    relax_func = _bfd_riscv_relax_import_pcrel;
 	}
       else if (type == R_RISCV_ALIGN)
 	relax_func = _bfd_riscv_relax_align;
       else if (type == R_RISCV_RVC_LUI)
 	relax_func = _bfd_riscv_relax_clean_rvc;
+      else if (ComponentMode && (type == R_RISCV_GOT_HI20))
+	relax_func = _bfd_riscv_relax_got_ref;
 
       if (!relax_func)
 	continue;
@@ -3966,7 +4031,7 @@ _bfd_riscv_elf_final_link (bfd *abfd, struct bfd_link_info *info)
 		}
 		(void) ReleaseExportEntry();
 	} else if (ComponentMode) {
-		/* We should have at least on export to be able to enter the coponent */
+		/* We should have at least on export to be able to enter the component */
 		(*_bfd_error_handler)(_("Component has empty export section"));
 	}
 

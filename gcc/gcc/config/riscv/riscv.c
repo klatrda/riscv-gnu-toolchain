@@ -571,6 +571,22 @@ riscv_symbol_binds_local_p (const_rtx x)
 	  : SYMBOL_REF_LOCAL_P (x));
 }
 
+bool
+riscv_is_import_symbol_p (rtx addr)
+{
+  tree decl;
+  tree attrs;
+
+  if (GET_CODE(addr) != SYMBOL_REF) return false;
+  decl = SYMBOL_REF_DECL(addr);
+  if (decl) {
+     attrs = TYPE_ATTRIBUTES (TREE_TYPE(decl));
+     // attrs = DECL_ATTRIBUTES (decl);
+     if ((attrs && lookup_attribute ("import", attrs))) return true;
+  }
+  return false;
+}
+
 /* Return the method that should be used to access SYMBOL_REF or
    LABEL_REF X in context CONTEXT.  */
 
@@ -583,6 +599,7 @@ riscv_classify_symbol (const_rtx x)
   if (GET_CODE (x) == LABEL_REF)
     {
       if (riscv_is_tiny_symbol_p((rtx) x)) return SYMBOL_TINY_ABSOLUTE;
+      // if (LABEL_REF_NONLOCAL_P (x) && !riscv_is_import_symbol_p((rtx) x))
       if (LABEL_REF_NONLOCAL_P (x))
 	return SYMBOL_GOT_DISP;
       return SYMBOL_ABSOLUTE;
@@ -590,7 +607,7 @@ riscv_classify_symbol (const_rtx x)
 
   gcc_assert (GET_CODE (x) == SYMBOL_REF);
 
-  if (flag_pic && !riscv_symbol_binds_local_p (x))
+  if (flag_pic && !riscv_symbol_binds_local_p (x) && !riscv_is_import_symbol_p((rtx) x))
     return SYMBOL_GOT_DISP;
 
   if (riscv_is_tiny_symbol_p((rtx) x)) return SYMBOL_TINY_ABSOLUTE; else return SYMBOL_ABSOLUTE;
@@ -1967,7 +1984,9 @@ printf("----------------------------\n");
       if (symbolic_operand (src, VOIDmode))
 	switch (riscv_classify_symbolic_expression (src))
 	  {
-	  case SYMBOL_GOT_DISP: return "la\t%0,%1";
+	  case SYMBOL_GOT_DISP: 
+		// if (LINK_COMP) return "lla\t%0,%1"; else return "la\t%0,%1";
+		return "la\t%0,%1";
 	  case SYMBOL_ABSOLUTE: return "lla\t%0,%1";
 	  // case SYMBOL_TINY_ABSOLUTE: return "addi\t%0,x0,%1";
 	  case SYMBOL_TINY_ABSOLUTE: return "lla\t%0,%1";
@@ -3422,7 +3441,6 @@ riscv_is_tiny_symbol_p (rtx addr)
   }
   return false;
 }
-
 
 /* Print symbolic operand OP, which is part of a HIGH or LO_SUM
    in context CONTEXT.  RELOCS is the array of relocations to use.  */
@@ -6527,8 +6545,9 @@ void riscv_output_external (FILE *file, tree decl, const char *name)
 			// printf("Found Func import on %s\n", name);
   			vec_safe_push (import_symbols, p);
 		}
-		if ((attrs && lookup_attribute ("export" ,attrs))) {
-			// printf("Found Func export on %s\n", name);
+		if ((attrs && lookup_attribute ("export" ,attrs) && !DECL_ARTIFICIAL(decl))) {
+			// printf("Found Func export on %s, builtin: %s, Artificial: %s\n",
+				// name, DECL_IS_BUILTIN(decl)?"Yes":"No", DECL_ARTIFICIAL(decl)?"Yes":"No");
   			vec_safe_push (export_symbols, p);
 		}
   	}
