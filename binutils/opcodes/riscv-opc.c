@@ -632,6 +632,14 @@ const struct riscv_opcode riscv_builtin_opcodes[] =
 
 /* PULP specific opcodes */
 
+/* Pulp slim */
+
+/* Load from event unit */
+
+{"p.elw",		"Xpulpslim", "d,o(s)",	MATCH_LWU, 				MASK_LWU, 	match_opcode,   WR_xd|RD_xs1 },
+
+/* Pulp slim end */
+
 /* Pulp v0 => move to pulp v0, Sven version. Disable HW loop since hw is buggy */
 
 /* post-increment and register-register loads */

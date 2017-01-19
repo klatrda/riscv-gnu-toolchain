@@ -436,6 +436,10 @@ static void ParsePulpArch(const char *arg)
                   	if (Pulp_Chip.processor == PULP_NONE || Pulp_Chip.processor == PULP_RISCV) Pulp_Chip.processor = PULP_RISCV;
                   	else einfo(_("%F -Xriscv: pulp architecture is already defined as %s"), PulpProcessorImage(Pulp_Chip.processor));
 			break;
+		case PULP_SLIM:
+                  	if (Pulp_Chip.processor == PULP_NONE || Pulp_Chip.processor == PULP_SLIM) Pulp_Chip.processor = PULP_SLIM;
+                  	else einfo(_("%F -Xpulpslim: pulp architecture is already defined as %s"), PulpProcessorImage(Pulp_Chip.processor));
+			break;
 		case PULP_NONE:
 			if (Len==0) {
                   		einfo(_ ("%F -march=%s: unsupported ISA substring %s"), arg, p); return;

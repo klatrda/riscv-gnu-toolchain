@@ -4775,6 +4775,13 @@ riscv_builtin_avail_pulp_vall (void)
   return 0;
 }
 
+static unsigned int
+riscv_builtin_avail_pulp_v2_or_slim (void)
+{
+  if (Pulp_Cpu>=PULP_V2 || Pulp_Cpu==PULP_SLIM) return 1;
+  return 0;
+}
+
 static int CheckBuiltin(int Code, int BuiltinIndex, struct ExtraBuiltinImmArg *ExtraImmArg, int Narg, ...);
 
 /* Construct a riscv_builtin_description from the given arguments.

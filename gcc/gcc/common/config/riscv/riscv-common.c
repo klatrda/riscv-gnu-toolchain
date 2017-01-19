@@ -117,6 +117,12 @@ riscv_parse_arch_string (const char *isa, int *flags)
 			if (Pulp_Cpu == PULP_NONE || Pulp_Cpu == PULP_V3) Pulp_Cpu = PULP_V3;
 			else error("-Xpulpv3: pulp architecture is already defined as %s", PulpProcessorImage(Pulp_Cpu));
 			break;
+		case PULP_SLIM:
+    			*flags |= MASK_32BIT; *flags &= ~MASK_ATOMIC;
+  			*flags |= MASK_SOFT_FLOAT_ABI;
+			if (Pulp_Cpu == PULP_NONE || Pulp_Cpu == PULP_SLIM) Pulp_Cpu = PULP_SLIM;
+			else error("-Xpulpslim: pulp architecture is already defined as %s", PulpProcessorImage(Pulp_Cpu));
+			break;
 		default:
 			break;
 	}

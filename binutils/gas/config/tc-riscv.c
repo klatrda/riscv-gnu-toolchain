@@ -227,6 +227,10 @@ riscv_set_arch (const char *arg)
                 	if (Pulp_Chip.processor == PULP_NONE || Pulp_Chip.processor == PULP_V3) Pulp_Chip.processor = PULP_V3;
                 	else as_fatal("-Xpulpv3: pulp architecture is already defined as %s", PulpProcessorImage(Pulp_Chip.processor));
 			break;
+		case PULP_SLIM:
+                	if (Pulp_Chip.processor == PULP_NONE || Pulp_Chip.processor == PULP_SLIM) Pulp_Chip.processor = PULP_SLIM;
+                	else as_fatal("-Xpulpslim: pulp architecture is already defined as %s", PulpProcessorImage(Pulp_Chip.processor));
+			break;
 		case PULP_NONE:
 			if (Len==0) {
                 		as_fatal ("-march=%s: unsupported ISA substring %s", arg, p);

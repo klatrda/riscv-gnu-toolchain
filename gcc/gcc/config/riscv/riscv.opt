@@ -72,6 +72,9 @@ Enum(Pulp_Processor_Type) String(pulpv2) Value(PULP_V2)
 EnumValue
 Enum(Pulp_Processor_Type) String(pulpv3) Value(PULP_V3)
 
+EnumValue
+Enum(Pulp_Processor_Type) String(pulpslim) Value(PULP_SLIM)
+
 mcpu=
 Target RejectNegative Joined Var(Pulp_Cpu) Enum(Pulp_Processor_Type) Init(PULP_NONE)
 -mcpu=CPU       Compile code for Pulp variant CPU, default is none.

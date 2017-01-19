@@ -968,6 +968,9 @@ bfd_boolean PulpImportCreateNameAndRelocSections(int Mode,
 	if (SecName == NULL || SecReloc == NULL) return FALSE;
 	// SecName[0]  = (Mode&0x1) | ((SecNameSize)<<1);
 
+	for (i=0; i< (SecNameSize>>2); i++) SecName[i] = 0;
+	for (i=0; i< (SecRelocSize>>2); i++) SecReloc[i] = 0;
+
 	SecName[0] = (N_Import&0x0FFF) | ((SecNameSize>>2)<<12);
 	HeadName = (1 + N_Import)*4;
 
@@ -3935,7 +3938,7 @@ _bfd_riscv_elf_final_link (bfd *abfd, struct bfd_link_info *info)
       		(*_bfd_error_handler)(_("Failed to create Import sections"));
 		return FALSE;
 	}
-
+	if (Trace) printf("NImport: %d, SecNameSize: %d, SecRelocSize: %d\n", NImport, SecNameSize, SecRelocSize);
 
 	if (NImport) {
 		struct bfd_section *TextSec = NULL;
@@ -3987,6 +3990,35 @@ _bfd_riscv_elf_final_link (bfd *abfd, struct bfd_link_info *info)
 	        	return FALSE;
 		}
 		(void) ReleaseImportEntry();
+	} else {
+		/* In this case both sections are empty with size = 4 for the section descriptor
+		   descriptor itself is 0 */
+		s = bfd_get_section_by_name (abfd, ".pulp.import.names");
+		if (s) {
+			unsigned int Empty = 0;
+			SecNameSize = 4;
+			s->contents = xmalloc(SecNameSize);
+			s->size = SecNameSize;
+			if (! bfd_set_section_contents (abfd, s, (char *) &Empty, 0, SecNameSize)) {
+      				(*_bfd_error_handler)(_(".pulp.import.names: Failed to set content"));
+	        		return FALSE;
+			} else if (Trace) {
+				fprintf(stderr, ".pulp.import.names: Set content OK\n");
+			}
+		}
+		s = bfd_get_section_by_name (abfd, ".pulp.import.relocs");
+		if (s) {
+			unsigned int Empty = 0;
+			SecRelocSize = 4;
+			s->contents = xmalloc(SecRelocSize);
+			s->size = SecRelocSize;
+			if (! bfd_set_section_contents (abfd, s, (char *) &Empty, 0, SecRelocSize)) {
+      				(*_bfd_error_handler)(_(".pulp.import.relocs: Failed to set content"));
+	        		return FALSE;
+			} else if (Trace) {
+				fprintf(stderr, ".pulp.import.relocs: Set content OK\n");
+			}
+		}
 	}
 
 	if (ComponentMode) {
