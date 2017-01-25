@@ -134,7 +134,7 @@ static enum Pulp_Processor_Type PulpDecodeCpu(const char *Text, int *Len)
         else if (strncmp (Dup, "pulpv1", 6) == 0) { free(Dup); if (Len) *Len = 6; return PULP_V1; }
         else if (strncmp (Dup, "pulpv2", 6) == 0) { free(Dup); if (Len) *Len = 6; return PULP_V2; }
         else if (strncmp (Dup, "pulpv3", 6) == 0) { free(Dup); if (Len) *Len = 6; return PULP_V3; }
-        else if (strncmp (Dup, "pulpslim", 8) == 0)   { free(Dup); if (Len) *Len = 4; return PULP_SLIM; }
+        else if (strncmp (Dup, "pulpslim", 8) == 0)   { free(Dup); if (Len) *Len = 8; return PULP_SLIM; }
         else                                      { free(Dup); if (Len) *Len = 0; return PULP_NONE; }
 }
 
