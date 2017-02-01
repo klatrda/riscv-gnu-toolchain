@@ -5324,6 +5324,7 @@ riscv_prepare_builtin_arg (enum insn_code icode,
       /* Check the predicate again.  */
       if (!insn_data[icode].operand[opno].predicate (value, mode))
 	{
+// debug_rtx(value);
 	  error ("invalid argument to built-in function on arg %d, builtin arg mode: %s, actual arg mode: %s",
 		  opno, GET_MODE_NAME(mode), GET_MODE_NAME(TYPE_MODE (TREE_TYPE (arg))));
 	  return const0_rtx;

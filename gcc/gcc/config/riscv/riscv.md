@@ -3252,7 +3252,7 @@
 
 (define_insn "OffsetedRead"
   [(set (match_operand:SI 0 "register_operand" "=r,r")
-        (unspec_volatile:SI [(match_operand:SI 1 "register_operand" "r,r") (match_operand:SI 2 "immediate_operand" "r,i")] UNSPEC_OFFSETED_READ)
+        (unspec_volatile:SI [(match_operand:SI 1 "register_operand" "r,r") (match_operand:SI 2 "nonmemory_operand" "r,i")] UNSPEC_OFFSETED_READ)
    )
   ]
   "(Pulp_Cpu>=PULP_V2)"
