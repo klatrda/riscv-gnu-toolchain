@@ -25,6 +25,12 @@
 #define _PULP_CHIP_OPTIONS_
 #include <string.h>
 
+enum Pulp_DP_Format_Type
+{
+	PULP_DP_FORMAT64=0,
+	PULP_DP_FORMAT32=1
+};
+
 enum Pulp_Chip_Config_Type
 {
 	PULP_CHIP_CONFIG_ALL,

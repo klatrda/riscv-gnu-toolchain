@@ -24,6 +24,19 @@
 HeaderInclude
 config/riscv/riscv-opts.h
 
+Enum
+Name(Pulp_DP_Format_Type) Type(enum Pulp_DP_Format_Type)
+Possible types for -mfpdouble=option
+
+EnumValue
+Enum(Pulp_DP_Format_Type) String(double) Value(PULP_DP_FORMAT64)
+
+EnumValue
+Enum(Pulp_DP_Format_Type) String(float) Value(PULP_DP_FORMAT32)
+
+mfpdouble=
+Target RejectNegative Joined Enum(Pulp_DP_Format_Type) Var(Pulp_DP_Format) Init(PULP_DP_FORMAT64)
+Specify which format for double
 
 Enum
 Name(Pulp_Chip_Config_Type) Type(enum Pulp_Chip_Config_Type)

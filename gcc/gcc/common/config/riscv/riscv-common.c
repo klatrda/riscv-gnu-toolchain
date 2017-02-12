@@ -69,8 +69,10 @@ riscv_parse_arch_string (const char *isa, int *flags)
     }
   else if (TARGET_HARD_FLOAT)
     {
-      error ("-march=%s: single-precision-only is not yet supported", isa);
-      return;
+	if (Pulp_DP_Format != PULP_DP_FORMAT32) {
+      		error ("-march=%s: single-precision-only is not yet supported", isa);
+      		return;
+	}
     }
 
   *flags &= ~MASK_RVC;
@@ -107,13 +109,13 @@ riscv_parse_arch_string (const char *isa, int *flags)
 			break;
 		case PULP_V2:
     			*flags |= MASK_32BIT; *flags &= ~MASK_MULDIV; *flags &= ~MASK_ATOMIC;
-  			*flags |= MASK_SOFT_FLOAT_ABI;
+			if (Pulp_DP_Format != PULP_DP_FORMAT32) *flags |= MASK_SOFT_FLOAT_ABI;
 			if (Pulp_Cpu == PULP_NONE || Pulp_Cpu == PULP_V2) Pulp_Cpu = PULP_V2;
 			else error("-Xpulpv2: pulp architecture is already defined as %s", PulpProcessorImage(Pulp_Cpu));
 			break;
 		case PULP_V3:
     			*flags |= MASK_32BIT; *flags |= MASK_MULDIV; *flags &= ~MASK_ATOMIC;
-  			*flags |= MASK_SOFT_FLOAT_ABI;
+			if (Pulp_DP_Format != PULP_DP_FORMAT32) *flags |= MASK_SOFT_FLOAT_ABI;
 			if (Pulp_Cpu == PULP_NONE || Pulp_Cpu == PULP_V3) Pulp_Cpu = PULP_V3;
 			else error("-Xpulpv3: pulp architecture is already defined as %s", PulpProcessorImage(Pulp_Cpu));
 			break;

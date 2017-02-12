@@ -485,7 +485,7 @@
 	(plus:ANYF (match_operand:ANYF 1 "register_operand" "f")
 		   (match_operand:ANYF 2 "register_operand" "f")))]
   ""
-  "fadd.<fmt>\t%0,%1,%2"
+  { return (Pulp_DP_Format==PULP_DP_FORMAT32) ? "fadd.s\t%0,%1,%2" : "fadd.<fmt>\t%0,%1,%2"; }
   [(set_attr "type" "fadd")
    (set_attr "mode" "<UNITMODE>")])
 
@@ -564,7 +564,7 @@
 	(minus:ANYF (match_operand:ANYF 1 "register_operand" "f")
 		    (match_operand:ANYF 2 "register_operand" "f")))]
   ""
-  "fsub.<fmt>\t%0,%1,%2"
+  { return (Pulp_DP_Format==PULP_DP_FORMAT32) ? "fsub.s\t%0,%1,%2" : "fsub.<fmt>\t%0,%1,%2"; }
   [(set_attr "type" "fadd")
    (set_attr "mode" "<UNITMODE>")])
 
@@ -652,7 +652,7 @@
 	(mult:SCALARF (match_operand:SCALARF 1 "register_operand" "f")
 		      (match_operand:SCALARF 2 "register_operand" "f")))]
   ""
-  "fmul.<fmt>\t%0,%1,%2"
+  { return (Pulp_DP_Format==PULP_DP_FORMAT32) ? "fmul.s\t%0,%1,%2" : "fmul.<fmt>\t%0,%1,%2"; }
   [(set_attr "type" "fmul")
    (set_attr "mode" "<UNITMODE>")])
 
@@ -912,7 +912,7 @@
 	(div:ANYF (match_operand:ANYF 1 "register_operand" "f")
 		  (match_operand:ANYF 2 "register_operand" "f")))]
   "TARGET_HARD_FLOAT && TARGET_FDIV"
-  "fdiv.<fmt>\t%0,%1,%2"
+  { return (Pulp_DP_Format==PULP_DP_FORMAT32) ? "fdiv.s\t%0,%1,%2" : "fdiv.<fmt>\t%0,%1,%2"; }
   [(set_attr "type" "fdiv")
    (set_attr "mode" "<UNITMODE>")])
 
@@ -928,7 +928,8 @@
 	(sqrt:ANYF (match_operand:ANYF 1 "register_operand" "f")))]
   "TARGET_HARD_FLOAT && TARGET_FDIV"
 {
-    return "fsqrt.<fmt>\t%0,%1";
+    // return "fsqrt.<fmt>\t%0,%1";
+    return (Pulp_DP_Format==PULP_DP_FORMAT32) ? "fsqrt.s\t%0,%1" : "fsqrt.<fmt>\t%0,%1"; 
 }
   [(set_attr "type" "fsqrt")
    (set_attr "mode" "<UNITMODE>")])
@@ -942,7 +943,7 @@
       (match_operand:ANYF 2 "register_operand" "f")
       (match_operand:ANYF 3 "register_operand" "f")))]
   "TARGET_HARD_FLOAT"
-  "fmadd.<fmt>\t%0,%1,%2,%3"
+  { return (Pulp_DP_Format==PULP_DP_FORMAT32) ? "fmadd.s\t%0,%1,%2,%3" : "fmadd.<fmt>\t%0,%1,%2,%3"; }
   [(set_attr "type" "fmadd")
    (set_attr "mode" "<UNITMODE>")])
 
@@ -953,7 +954,7 @@
       (match_operand:ANYF 2 "register_operand" "f")
       (neg:ANYF (match_operand:ANYF 3 "register_operand" "f"))))]
   "TARGET_HARD_FLOAT"
-  "fmsub.<fmt>\t%0,%1,%2,%3"
+  { return (Pulp_DP_Format==PULP_DP_FORMAT32) ? "fmsub.s\t%0,%1,%2,%3" : "fmsub.<fmt>\t%0,%1,%2,%3"; }
   [(set_attr "type" "fmadd")
    (set_attr "mode" "<UNITMODE>")])
 
@@ -965,7 +966,7 @@
         (match_operand:ANYF 2 "register_operand" "f")
         (match_operand:ANYF 3 "register_operand" "f"))))]
   "TARGET_HARD_FLOAT"
-  "fnmadd.<fmt>\t%0,%1,%2,%3"
+  { return (Pulp_DP_Format==PULP_DP_FORMAT32) ? "fnmadd.s\t%0,%1,%2,%3" : "fnmadd.<fmt>\t%0,%1,%2,%3"; }
   [(set_attr "type" "fmadd")
    (set_attr "mode" "<UNITMODE>")])
 
@@ -977,7 +978,7 @@
         (match_operand:ANYF 2 "register_operand" "f")
         (neg:ANYF (match_operand:ANYF 3 "register_operand" "f")))))]
   "TARGET_HARD_FLOAT"
-  "fnmsub.<fmt>\t%0,%1,%2,%3"
+  { return (Pulp_DP_Format==PULP_DP_FORMAT32) ? "fnmsub.s\t%0,%1,%2,%3" : "fnmsub.<fmt>\t%0,%1,%2,%3"; }
   [(set_attr "type" "fmadd")
    (set_attr "mode" "<UNITMODE>")])
 
@@ -990,7 +991,7 @@
         (neg:ANYF (match_operand:ANYF 1 "register_operand" "f"))
         (match_operand:ANYF 2 "register_operand" "f"))))]
   "TARGET_HARD_FLOAT && !HONOR_SIGNED_ZEROS (<MODE>mode)"
-  "fnmadd.<fmt>\t%0,%1,%2,%3"
+  { return (Pulp_DP_Format==PULP_DP_FORMAT32) ? "fnmadd.s\t%0,%1,%2,%3" : "fnmadd.<fmt>\t%0,%1,%2,%3"; }
   [(set_attr "type" "fmadd")
    (set_attr "mode" "<UNITMODE>")])
 
@@ -1003,7 +1004,7 @@
         (match_operand:ANYF 1 "register_operand" "f")
         (match_operand:ANYF 2 "register_operand" "f"))))]
   "TARGET_HARD_FLOAT && !HONOR_SIGNED_ZEROS (<MODE>mode)"
-  "fnmsub.<fmt>\t%0,%1,%2,%3"
+  { return (Pulp_DP_Format==PULP_DP_FORMAT32) ? "fnmsub.s\t%0,%1,%2,%3" : "fnmsub.<fmt>\t%0,%1,%2,%3"; }
   [(set_attr "type" "fmadd")
    (set_attr "mode" "<UNITMODE>")])
 
@@ -1018,7 +1019,7 @@
   [(set (match_operand:ANYF 0 "register_operand" "=f")
 	(abs:ANYF (match_operand:ANYF 1 "register_operand" "f")))]
   "TARGET_HARD_FLOAT"
-  "fabs.<fmt>\t%0,%1"
+  { return (Pulp_DP_Format==PULP_DP_FORMAT32) ? "fabs.s\t%0,%1" : "fabs.<fmt>\t%0,%1"; }
   [(set_attr "type" "fmove")
    (set_attr "mode" "<UNITMODE>")])
 
@@ -1043,7 +1044,7 @@
 		   (smin:ANYF (match_operand:ANYF 1 "register_operand" "f")
 			    (match_operand:ANYF 2 "register_operand" "f")))]
   "TARGET_HARD_FLOAT"
-  "fmin.<fmt>\t%0,%1,%2"
+  { return (Pulp_DP_Format==PULP_DP_FORMAT32) ? "fmin.s\t%0,%1,%2" : "fmin.<fmt>\t%0,%1,%2"; }
   [(set_attr "type" "fmove")
    (set_attr "mode" "<UNITMODE>")])
 
@@ -1052,7 +1053,7 @@
 		   (smax:ANYF (match_operand:ANYF 1 "register_operand" "f")
 			    (match_operand:ANYF 2 "register_operand" "f")))]
   "TARGET_HARD_FLOAT"
-  "fmax.<fmt>\t%0,%1,%2"
+  { return (Pulp_DP_Format==PULP_DP_FORMAT32) ? "fmax.s\t%0,%1,%2" : "fmax.<fmt>\t%0,%1,%2"; }
   [(set_attr "type" "fmove")
    (set_attr "mode" "<UNITMODE>")])
 
@@ -2428,7 +2429,7 @@
   [(set (match_operand:ANYF 0 "register_operand" "=f")
 	(neg:ANYF (match_operand:ANYF 1 "register_operand" "f")))]
   "TARGET_HARD_FLOAT"
-  "fneg.<fmt>\t%0,%1"
+  { return (Pulp_DP_Format==PULP_DP_FORMAT32) ? "fneg.s\t%0,%1" : "fneg.<fmt>\t%0,%1"; }
   [(set_attr "type" "fmove")
    (set_attr "mode" "<UNITMODE>")])
 
@@ -5901,7 +5902,7 @@
 	      [(match_operand:SCALARF 2 "register_operand" "f")
 	       (match_operand:SCALARF 3 "register_operand" "f")]))]
   "TARGET_HARD_FLOAT"
-  "f%C1.<fmt>\t%0,%2,%3"
+  { return (Pulp_DP_Format==PULP_DP_FORMAT32) ? "f%C1.s\t%0,%2,%3" : "f%C1.<fmt>\t%0,%2,%3"; }
   [(set_attr "type" "fcmp")
    (set_attr "mode" "<UNITMODE>")])
 
