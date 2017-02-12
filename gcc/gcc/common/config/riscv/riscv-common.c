@@ -35,6 +35,9 @@ riscv_parse_arch_string (const char *isa, int *flags)
 {
   const char *p = isa;
 
+
+  if (Pulp_DP_Format == PULP_DP_FORMAT32) *flags |= MASK_MAP_DOUBLE_TO_FLOAT;
+
   if (strncmp (p, "RV32", 4) == 0)
     *flags |= MASK_32BIT, p += 4;
   else if (strncmp (p, "RV64", 4) == 0)

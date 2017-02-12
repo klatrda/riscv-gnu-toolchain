@@ -141,13 +141,12 @@
 
 ;; True if the main data type is twice the size of a word.
 (define_attr "dword_mode" "no,yes"
-  (cond [(and (eq_attr "mode" "DI,DF")
-	      (eq (symbol_ref "TARGET_64BIT") (const_int 0)))
-	 (const_string "yes")
-
-	 (and (eq_attr "mode" "TI,TF")
-	      (ne (symbol_ref "TARGET_64BIT") (const_int 0)))
-	 (const_string "yes")]
+  (cond [(and (eq_attr "mode" "DI") (eq (symbol_ref "TARGET_64BIT") (const_int 0))) (const_string "yes")
+         (and (eq_attr "mode" "DF") (and (eq (symbol_ref "TARGET_64BIT") (const_int 0))
+					 (ne (symbol_ref "TARGET_MAP_DOUBLE_TO_FLOAT") (const_int 1)))
+	 ) (const_string "yes")
+	 (and (eq_attr "mode" "TI,TF") (ne (symbol_ref "TARGET_64BIT") (const_int 0))) (const_string "yes")
+        ]
 	(const_string "no")))
 
 ;; Classification of each insn.
@@ -312,7 +311,7 @@
 (define_mode_iterator MODE_PULP [V4QI V2HI SF SI])
 
 ;; 64-bit modes for which we provide move patterns.
-(define_mode_iterator MOVE64 [DI DF])
+(define_mode_iterator MOVE64 [DI (DF "!TARGET_MAP_DOUBLE_TO_FLOAT")])
 
 ;; 128-bit modes for which we provide move patterns on 64-bit targets.
 (define_mode_iterator MOVE128 [TI TF])
@@ -341,7 +340,7 @@
 
 ;; A floating-point mode for which moves involving FPRs may need to be split.
 (define_mode_iterator SPLITF
-  [(DF "!TARGET_64BIT")
+  [(DF "!TARGET_64BIT && !TARGET_MAP_DOUBLE_TO_FLOAT")
    (DI "!TARGET_64BIT")
    (TF "TARGET_64BIT")])
 
@@ -2487,7 +2486,7 @@
   [(set (match_operand:SF 0 "register_operand" "=f")
 	(float_truncate:SF (match_operand:DF 1 "register_operand" "f")))]
   "TARGET_HARD_FLOAT"
-  "fcvt.s.d\t%0,%1"
+  { return TARGET_MAP_DOUBLE_TO_FLOAT?"":"fcvt.s.d\t%0,%1";}
   [(set_attr "type"	"fcvt")
    (set_attr "cnv_mode"	"D2S")   
    (set_attr "mode"	"SF")])
@@ -2705,7 +2704,7 @@
   [(set (match_operand:DF 0 "register_operand" "=f")
 	(float_extend:DF (match_operand:SF 1 "register_operand" "f")))]
   "TARGET_HARD_FLOAT"
-  "fcvt.d.s\t%0,%1"
+  { return TARGET_MAP_DOUBLE_TO_FLOAT?"":"fcvt.d.s\t%0,%1"; }
   [(set_attr "type"	"fcvt")
    (set_attr "cnv_mode"	"S2D")   
    (set_attr "mode"	"DF")])
@@ -2721,7 +2720,7 @@
   [(set (match_operand:SI 0 "register_operand" "=r")
 	(fix:SI (match_operand:DF 1 "register_operand" "f")))]
   "TARGET_HARD_FLOAT"
-  "fcvt.w.d %0,%1,rtz"
+  { return TARGET_MAP_DOUBLE_TO_FLOAT?"fcvt.w.s %0,%1,rtz":"fcvt.w.d %0,%1,rtz"; }
   [(set_attr "type"	"fcvt")
    (set_attr "mode"	"DF")
    (set_attr "cnv_mode"	"D2I")])
@@ -2761,7 +2760,7 @@
   [(set (match_operand:DF 0 "register_operand" "=f")
 	(float:DF (match_operand:SI 1 "reg_or_0_operand" "rJ")))]
   "TARGET_HARD_FLOAT"
-  "fcvt.d.w\t%0,%z1"
+  { return TARGET_MAP_DOUBLE_TO_FLOAT?"fcvt.s.w\t%0,%z1":"fcvt.d.w\t%0,%z1"; }
   [(set_attr "type"	"fcvt")
    (set_attr "mode"	"DF")
    (set_attr "cnv_mode"	"I2D")])
@@ -2801,7 +2800,7 @@
   [(set (match_operand:DF 0 "register_operand" "=f")
 	(unsigned_float:DF (match_operand:SI 1 "reg_or_0_operand" "rJ")))]
   "TARGET_HARD_FLOAT"
-  "fcvt.d.wu\t%0,%z1"
+  { return TARGET_MAP_DOUBLE_TO_FLOAT?"fcvt.s.wu\t%0,%z1":"fcvt.d.wu\t%0,%z1"; }
   [(set_attr "type"	"fcvt")
    (set_attr "mode"	"DF")
    (set_attr "cnv_mode"	"I2D")])
@@ -2841,7 +2840,7 @@
   [(set (match_operand:SI 0 "register_operand" "=r")
 	(unsigned_fix:SI (match_operand:DF 1 "register_operand" "f")))]
   "TARGET_HARD_FLOAT"
-  "fcvt.wu.d %0,%1,rtz"
+  { return TARGET_MAP_DOUBLE_TO_FLOAT?"fcvt.wu.s %0,%1,rtz":"fcvt.wu.d %0,%1,rtz"; }
   [(set_attr "type"	"fcvt")
    (set_attr "mode"	"DF")
    (set_attr "cnv_mode"	"D2I")])

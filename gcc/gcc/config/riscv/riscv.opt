@@ -112,6 +112,10 @@ mL1Fc=
 Target RejectNegative Joined UInteger Var(_Pulp_L1_FC_Size) Init(0)
 -mL1c=SIZE	Set Fabric Controller L1 size to SIZE, Init to 0.
 
+mdf
+Target RejectNegative Mask(MAP_DOUBLE_TO_FLOAT)
+Internal flag for double mapped on float
+
 m32
 Target RejectNegative Mask(32BIT)
 Generate RV32 code
