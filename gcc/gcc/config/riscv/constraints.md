@@ -131,7 +131,7 @@
   "@internal"
   (and (match_code "const_int")
        (ior (match_test "(INTVAL(op) == 0)")
-	    (match_test "((!TARGET_MASK_NOBALL) && (Pulp_Cpu>=PULP_V2) && (INTVAL(op)>=-16) && (INTVAL(op)<=15))")
+	    (match_test "((Pulp_Cpu>=PULP_V2) && (INTVAL(op)>=-16) && (INTVAL(op)<=15))")
        )
   )
 )

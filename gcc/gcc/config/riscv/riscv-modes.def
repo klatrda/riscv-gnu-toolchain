@@ -23,6 +23,11 @@ along with GCC; see the file COPYING3.  If not see
 
 FLOAT_MODE (TF, 16, ieee_quad_format);
 
+FLOAT_MODE (HF, 2, 0);
+ADJUST_FLOAT_FORMAT (HF, &ieee_half_format);
+
+
+
 ADJUST_ALIGNMENT (DF, ((Pulp_DP_Format == PULP_DP_FORMAT64) ? 8 : 4));
 ADJUST_BYTESIZE (DF, ((Pulp_DP_Format == PULP_DP_FORMAT64) ? 8 : 4));
 ADJUST_FLOAT_FORMAT (DF, ((Pulp_DP_Format == PULP_DP_FORMAT64) ? &ieee_double_format : &ieee_single_format));

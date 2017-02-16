@@ -2247,7 +2247,7 @@ riscv_emit_compare (enum rtx_code *code, rtx *op0, rtx *op1)
 
 	    case EQ:
 	    case NE:
-              if ((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOBALL && (*code == EQ || *code == NE) && (GET_CODE(*op1) == CONST_INT) &&
+              if ((Pulp_Cpu>=PULP_V2) && (*code == EQ || *code == NE) && (GET_CODE(*op1) == CONST_INT) &&
 	          (INTVAL(*op1) >= -16) && (INTVAL(*op1) <= 15)) {
               } else if (SMALL_OPERAND (-rhs))
 	      /* Convert e.g. OP0 == 2048 into OP0 - 2048 == 0.  */
@@ -2261,17 +2261,12 @@ riscv_emit_compare (enum rtx_code *code, rtx *op0, rtx *op1)
 	    }
 	}
 
-      if ((*op1 == const0_rtx) || ((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOBALL && (*code == EQ || *code == NE) && (GET_CODE(*op1) == CONST_INT) &&
+      if ((*op1 == const0_rtx) || ((Pulp_Cpu>=PULP_V2) && (*code == EQ || *code == NE) && (GET_CODE(*op1) == CONST_INT) &&
 	  (INTVAL(*op1) >= -16) && (INTVAL(*op1) <= 15))) {
       } else {
 	*op1 = force_reg (GET_MODE (cmp_op0), *op1);
       }
 
-
-/*
-      if (*op1 != const0_rtx && !(((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOBALL) && *code == EQ && *op1 == constm1_rtx))
-	*op1 = force_reg (GET_MODE (cmp_op0), *op1);
-*/
     }
   else
     {
@@ -4782,6 +4777,13 @@ riscv_builtin_avail_pulp_v2_or_slim (void)
   return 0;
 }
 
+static unsigned int
+riscv_builtin_avail_pulp_v2_or_slim_dev (void)
+{
+  if (Pulp_Cpu>=PULP_V2 || Pulp_Cpu==PULP_SLIM || Pulp_Cpu==PULP_SLIM_DEV) return 1;
+  return 0;
+}
+
 static int CheckBuiltin(int Code, int BuiltinIndex, struct ExtraBuiltinImmArg *ExtraImmArg, int Narg, ...);
 
 /* Construct a riscv_builtin_description from the given arguments.
@@ -5210,6 +5212,13 @@ riscv_init_builtins (void)
 {
   const struct riscv_builtin_description *d;
   unsigned int i;
+  tree fp16_type = make_node (REAL_TYPE);
+  tree fp8_type = make_node (REAL_TYPE);
+
+  TYPE_PRECISION (fp16_type) = 16; TYPE_PRECISION (fp8_type) = 8;
+  layout_type (fp16_type); layout_type (fp8_type);
+  (*lang_hooks.types.register_builtin_type) (fp16_type, "__fp16");
+  (*lang_hooks.types.register_builtin_type) (fp8_type, "__fp8");
 
   opaque_V4QI_type_node    = build_opaque_vector_type (intQI_type_node, 4);
   opaque_V2HI_type_node    = build_opaque_vector_type (intHI_type_node, 2);
@@ -5695,6 +5704,10 @@ riscv_conditional_register_usage (void)
       for (regno = FP_REG_FIRST; regno <= FP_REG_LAST; regno++)
 	fixed_regs[regno] = call_used_regs[regno] = 1;
     }
+  if (TARGET_USE_16REG) {
+      for (regno = GP_REG_FIRST+16; regno <= GP_REG_LAST; regno++)
+	fixed_regs[regno] = call_used_regs[regno] = 1;
+  }
 }
 
 /* Return a register priority for hard reg REGNO.  */

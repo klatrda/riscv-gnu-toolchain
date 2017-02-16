@@ -68,7 +68,7 @@
   (ior (match_operand 0 "register_operand")
        (and (match_code "const_int")
             (ior (match_operand 0 "const_0_operand")
-	         (match_test "((!TARGET_MASK_NOBALL) && (Pulp_Cpu>=PULP_V2) && (INTVAL(op)>=-16) && (INTVAL(op)<=15))")
+	         (match_test "((Pulp_Cpu>=PULP_V2) && (INTVAL(op)>=-16) && (INTVAL(op)<=15))")
             )
        )
   )
