@@ -220,7 +220,8 @@
 #define MASK_SBREAK  0xffffffff
 #define MATCH_SRET 0x10000073
 #define MASK_SRET  0xffffffff
-#define MATCH_SFENCE_VM 0x10100073
+// #define MATCH_SFENCE_VM 0x10100073
+#define MATCH_SFENCE_VM 0x10400073
 #define MASK_SFENCE_VM  0xfff07fff
 #define MATCH_WFI 0x10200073
 #define MASK_WFI  0xffffffff
