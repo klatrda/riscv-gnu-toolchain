@@ -3257,8 +3257,8 @@
   ]
   "(Pulp_Cpu>=PULP_V2)"
   "@
-   lw \t%0,%2(%1)\t# Volatile Load offseted
-   lw \t%0,%2(%1)\t# Volatile Load offseted"
+   p.lw \t%0,%2(%1)\t# Volatile Load offseted
+   p.lw \t%0,%2(%1)\t# Volatile Load offseted"
 )
 
 (define_insn "OffsetedWrite"
@@ -3279,7 +3279,7 @@
    )
   ]
   "(Pulp_Cpu>=PULP_V2)"
-  "lw \t%0,%2(%1)\t# Volatile Load offseted (OMP)"
+  "p.lw \t%0,%2(%1)\t# Volatile Load offseted (OMP)"
 )
 
 (define_insn "OffsetedReadNonVol"
@@ -3289,7 +3289,7 @@
    )
   ]
   "(Pulp_Cpu>=PULP_V2)"
-  "lw \t%0,%2(%1)\t# Non volatile Load offseted"
+  "p.lw \t%0,%2(%1)\t# Non volatile Load offseted"
 )
 
 ;; Post modified load and store
