@@ -5212,6 +5212,7 @@ riscv_init_builtins (void)
 {
   const struct riscv_builtin_description *d;
   unsigned int i;
+/*
   tree fp16_type = make_node (REAL_TYPE);
   tree fp8_type = make_node (REAL_TYPE);
 
@@ -5219,6 +5220,7 @@ riscv_init_builtins (void)
   layout_type (fp16_type); layout_type (fp8_type);
   (*lang_hooks.types.register_builtin_type) (fp16_type, "__fp16");
   (*lang_hooks.types.register_builtin_type) (fp8_type, "__fp8");
+*/
 
   opaque_V4QI_type_node    = build_opaque_vector_type (intQI_type_node, 4);
   opaque_V2HI_type_node    = build_opaque_vector_type (intHI_type_node, 2);
