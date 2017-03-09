@@ -411,6 +411,7 @@ static const struct riscv_cpu_info riscv_cpu_info_table[] = {
   { "rocket", "IMAFD", &rocket_tune_info },
 };
 
+static unsigned int MaxArgInReg = MAX_ARGS_IN_REGISTERS;
 /* Return the riscv_cpu_info entry for the given name string.  */
 
 static const struct riscv_cpu_info *
@@ -2768,7 +2769,8 @@ riscv_get_arg_info (struct riscv_arg_info *info, const CUMULATIVE_ARGS *cum,
       && GET_MODE_CLASS (mode) == MODE_COMPLEX_FLOAT
       && GET_MODE_UNIT_SIZE (mode) < UNITS_PER_FPVALUE)
     {
-      if (cum->num_gprs >= MAX_ARGS_IN_REGISTERS - 1)
+      // if (cum->num_gprs >= MAX_ARGS_IN_REGISTERS - 1)
+      if (cum->num_gprs >= MaxArgInReg - 1)
         info->fpr_p = false;
       else
         num_words = 2;
@@ -2792,7 +2794,8 @@ riscv_get_arg_info (struct riscv_arg_info *info, const CUMULATIVE_ARGS *cum,
   if (doubleword_aligned_p)
     info->stack_offset += info->stack_offset & 1;
 
-  max_regs = MAX_ARGS_IN_REGISTERS - info->reg_offset;
+  // max_regs = MAX_ARGS_IN_REGISTERS - info->reg_offset;
+  max_regs = MaxArgInReg - info->reg_offset;
 
   /* Partition the argument between registers and stack.  */
   info->reg_words = MIN (num_words, max_regs);
@@ -2827,7 +2830,8 @@ riscv_function_arg (cumulative_args_t cum_v, enum machine_mode mode,
   riscv_get_arg_info (&info, cum, mode, type, named);
 
   /* Return straight away if the whole argument is passed on the stack.  */
-  if (info.reg_offset == MAX_ARGS_IN_REGISTERS)
+  // if (info.reg_offset == MAX_ARGS_IN_REGISTERS)
+  if (info.reg_offset == MaxArgInReg)
     return NULL;
 
   /* The n32 and n64 ABIs say that if any 64-bit chunk of the structure
@@ -3156,7 +3160,8 @@ riscv_setup_incoming_varargs (cumulative_args_t cum, enum machine_mode mode,
   riscv_function_arg_advance (pack_cumulative_args (&local_cum), mode, type, 1);
 
   /* Found out how many registers we need to save.  */
-  gp_saved = MAX_ARGS_IN_REGISTERS - local_cum.num_gprs;
+  // gp_saved = MAX_ARGS_IN_REGISTERS - local_cum.num_gprs;
+  gp_saved = MaxArgInReg - local_cum.num_gprs;
 
   if (!no_rtl && gp_saved > 0)
     {
@@ -5707,8 +5712,11 @@ riscv_conditional_register_usage (void)
 	fixed_regs[regno] = call_used_regs[regno] = 1;
     }
   if (TARGET_USE_16REG) {
+       MaxArgInReg = 6;
       for (regno = GP_REG_FIRST+16; regno <= GP_REG_LAST; regno++)
 	fixed_regs[regno] = call_used_regs[regno] = 1;
+  } else {
+	MaxArgInReg = MAX_ARGS_IN_REGISTERS;
   }
 }
 
