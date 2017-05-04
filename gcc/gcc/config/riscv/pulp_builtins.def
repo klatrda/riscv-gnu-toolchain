@@ -41,6 +41,8 @@ Currently these macros are used in 2 contexts:
   DIRECT_BUILTIN1(popcountsi2,          cnt,        	RISCV_INT_FTYPE_INT,             		pulp_vall, NULL)
   DIRECT_BUILTIN1(paritysi2,		parity,        	RISCV_INT_FTYPE_INT,             		pulp_vall, NULL)
 
+  DIRECT_BUILTIN1(abssi2,        	abs,        	RISCV_INT_FTYPE_INT,     			pulp_vall, NULL)
+
   DIRECT_BUILTIN1(maddsisi4,        	mac,        	RISCV_INT_FTYPE_INT_INT_INT,     		pulp_vall, NULL)
   DIRECT_BUILTIN1(msubsisi4,        	msu,        	RISCV_INT_FTYPE_INT_INT_INT,     		pulp_vall, NULL)
 
@@ -147,6 +149,7 @@ Currently these macros are used in 2 contexts:
 
   DIRECT_BUILTIN1(mulsNr_si3, 		mulsN,		RISCV_INT_FTYPE_SHORT_SHORT_INT,		pulp_v2, CheckBuiltin)
   DIRECT_BUILTIN1(mulsRNr_si3, 		mulsRN,		RISCV_INT_FTYPE_SHORT_SHORT_INT_INT,		pulp_v2, CheckBuiltin)
+  DIRECT_BUILTIN1(mulsRNr_hi3, 		mulshRN,	RISCV_SHORT_FTYPE_SHORT_SHORT_INT_INT,		pulp_v2, CheckBuiltin)
   DIRECT_BUILTIN1(muluNr_si3, 		muluN,		RISCV_INT_FTYPE_SHORT_SHORT_INT,		pulp_v2, CheckBuiltin)
   DIRECT_BUILTIN1(muluRNr_si3, 		muluRN,		RISCV_INT_FTYPE_SHORT_SHORT_INT_INT,		pulp_v2, CheckBuiltin)
   DIRECT_BUILTIN1(mulhhsNr_si3,		mulhhsN,	RISCV_INT_FTYPE_SHORT_SHORT_INT,		pulp_v2, CheckBuiltin)

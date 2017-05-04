@@ -634,37 +634,26 @@ const struct riscv_opcode riscv_builtin_opcodes[] =
 
 /* Pulp slim */
 
+{"p.mul",      		"Xpulpv2", "d,s,t",  	MATCH_MUL, 				MASK_MUL, 	match_opcode,  	WR_xd|RD_xs1|RD_xs2 },
+
+/* 32x32 into 64 support */
+
+{"p.mulh",      	"Xpulpv2", "d,s,t",  	MATCH_MULH, 				MASK_MULH, 	match_opcode,  WR_xd|RD_xs1|RD_xs2 },
+{"p.mulhu",     	"Xpulpv2", "d,s,t",  	MATCH_MULHU, 				MASK_MULHU, 	match_opcode,  WR_xd|RD_xs1|RD_xs2 },
+{"p.mulhsu",    	"Xpulpv2", "d,s,t",  	MATCH_MULHSU, 				MASK_MULHSU, 	match_opcode,  WR_xd|RD_xs1|RD_xs2 },
+
+/* 32 bit div and rem */
+
+{"p.div",      		"Xpulpv2",   "d,s,t",  	MATCH_DIV, 				MASK_DIV, 	match_opcode,  WR_xd|RD_xs1|RD_xs2 },
+{"p.divu",     		"Xpulpv2",   "d,s,t",  	MATCH_DIVU, 				MASK_DIVU, 	match_opcode,  WR_xd|RD_xs1|RD_xs2 },
+{"p.rem",      		"Xpulpv2",   "d,s,t",  	MATCH_REM, 				MASK_REM, 	match_opcode,  WR_xd|RD_xs1|RD_xs2 },
+{"p.remu",     		"Xpulpv2",   "d,s,t",  	MATCH_REMU,				MASK_REMU, 	match_opcode,  WR_xd|RD_xs1|RD_xs2 },
+
 /* Load from event unit */
 
 {"p.elw",		"Xpulpslim", "d,o(s)",	MATCH_LWU, 				MASK_LWU, 	match_opcode,   WR_xd|RD_xs1 },
 
 /* Pulp slim end */
-
-/* Pulp slim dev */
-{"p.mul",      		"Xpulpslimdev", "d,s,t",  	MATCH_MUL, 			MASK_MUL, 	match_opcode,  	WR_xd|RD_xs1|RD_xs2 },
-{"p.ff1",   		"Xpulpslimdev", "d,s",   	MATCH_FF1,   			MASK_PALUS, 	match_opcode, 	WR_xd|RD_xs1},
-{"p.fl1",   		"Xpulpslimdev", "d,s",   	MATCH_FL1,   			MASK_PALUS, 	match_opcode, 	WR_xd|RD_xs1},
-{"p.clb",   		"Xpulpslimdev", "d,s",   	MATCH_CLB,   			MASK_PALUS, 	match_opcode, 	WR_xd|RD_xs1},
-{"p.cnt",   		"Xpulpslimdev", "d,s",   	MATCH_CNT,   			MASK_PALUS, 	match_opcode, 	WR_xd|RD_xs1},
-
-{"p.extract",  		"Xpulpslimdev", "d,s,b5,bi",	MATCH_EXTRACT, 			MASK_PALU2,  	match_opcode,	WR_xd|RD_xs1},
-{"p.extracti", 		"Xpulpslimdev", "d,s,b5,bi",	MATCH_EXTRACT, 			MASK_PALU2,  	match_opcode,	WR_xd|RD_xs1},
-{"p.extractr", 		"Xpulpslimdev", "d,s,t",	MATCH_EXTRACTR,			MASK_PALU,  	match_opcode,	WR_xd|RD_xs1},
-{"p.extractu", 		"Xpulpslimdev", "d,s,b5,bi",	MATCH_EXTRACTU, 		MASK_PALU2,  	match_opcode,	WR_xd|RD_xs1},
-{"p.extractui", 	"Xpulpslimdev", "d,s,b5,bi",	MATCH_EXTRACTU, 		MASK_PALU2,  	match_opcode,	WR_xd|RD_xs1},
-{"p.extractur", 	"Xpulpslimdev", "d,s,t",	MATCH_EXTRACTUR, 		MASK_PALU,  	match_opcode,	WR_xd|RD_xs1},
-{"p.insert",  		"Xpulpslimdev", "d,s,b5,bi",	MATCH_INSERT, 			MASK_PALU2,  	match_opcode,	WR_xd|RD_xs1},
-{"p.inserti",  		"Xpulpslimdev", "d,s,b5,bi",	MATCH_INSERT, 			MASK_PALU2,  	match_opcode,	WR_xd|RD_xs1},
-{"p.insertr",  		"Xpulpslimdev", "d,s,t",	MATCH_INSERTR, 			MASK_PALU,  	match_opcode,	WR_xd|RD_xs1},
-{"p.bset",  		"Xpulpslimdev", "d,s,b5,bi",	MATCH_BSET, 			MASK_PALU2,  	match_opcode,	WR_xd|RD_xs1},
-{"p.bseti",  		"Xpulpslimdev", "d,s,b5,bi",	MATCH_BSET, 			MASK_PALU2,  	match_opcode,	WR_xd|RD_xs1},
-{"p.bsetr",  		"Xpulpslimdev", "d,s,t",	MATCH_BSETR, 			MASK_PALU,  	match_opcode,	WR_xd|RD_xs1},
-{"p.bclr",  		"Xpulpslimdev", "d,s,b5,bi",	MATCH_BCLR, 			MASK_PALU2,  	match_opcode,	WR_xd|RD_xs1},
-{"p.bclri",  		"Xpulpslimdev", "d,s,b5,bi",	MATCH_BCLR, 			MASK_PALU2,  	match_opcode,	WR_xd|RD_xs1},
-{"p.bclrr",  		"Xpulpslimdev", "d,s,t",	MATCH_BCLRR, 			MASK_PALU,  	match_opcode,	WR_xd|RD_xs1},
-
-{"p.elw",		"Xpulpslimdev", "d,o(s)",	MATCH_LWU, 			MASK_LWU, 	match_opcode,   WR_xd|RD_xs1 },
-/* Pulp slim dev end */
 
 /* Pulp v0 => move to pulp v0, Sven version. Disable HW loop since hw is buggy */
 

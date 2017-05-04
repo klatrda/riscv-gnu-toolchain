@@ -2475,14 +2475,14 @@ bool riscv_valid_clip_operands (rtx ux, rtx lx, int sign)
 	return false;
 }
 
-int riscv_valid_norm_round_imm_op(rtx norm_oper, rtx round_oper)
+int riscv_valid_norm_round_imm_op(rtx norm_oper, rtx round_oper, int MaxVal)
 
 {
 
 	if (GET_CODE(norm_oper) == CONST_INT) {
 		HOST_WIDE_INT val = INTVAL (norm_oper);
 		HOST_WIDE_INT val1;
-		if ((int) val < 0 || (int) val > 31) return 0;
+		if ((int) val < 0 || (int) val > MaxVal) return 0;
 		if (!round_oper) return 1;
 		if (GET_CODE(round_oper) != CONST_INT) return 0;
 		val1 = INTVAL (round_oper);
@@ -4782,13 +4782,6 @@ riscv_builtin_avail_pulp_v2_or_slim (void)
   return 0;
 }
 
-static unsigned int
-riscv_builtin_avail_pulp_v2_or_slim_dev (void)
-{
-  if (Pulp_Cpu>=PULP_V2 || Pulp_Cpu==PULP_SLIM || Pulp_Cpu==PULP_SLIM_DEV) return 1;
-  return 0;
-}
-
 static int CheckBuiltin(int Code, int BuiltinIndex, struct ExtraBuiltinImmArg *ExtraImmArg, int Narg, ...);
 
 /* Construct a riscv_builtin_description from the given arguments.
@@ -4926,6 +4919,7 @@ static int CheckBuiltin(int Code, int BuiltinIndex, struct ExtraBuiltinImmArg *E
 			Diag = "__builtin_pulp_mac{hh,}{s,u}NRr (X, Y, Acc, Norm, Round) expects Norm and Round cst, Norm<=31, Round==2^(Norm-1)";
 			break;
 		/* Op2 const and in 0..31, Op3 const and == 2^(Op2 - 1) */
+		case CODE_FOR_mulsRNr_hi3:
 		case CODE_FOR_mulsRNr_si3:
 		case CODE_FOR_muluRNr_si3:
 		case CODE_FOR_mulhhsRNr_si3:

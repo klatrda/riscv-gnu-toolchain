@@ -73,7 +73,7 @@ extern int  riscv_replicated_const_vector (rtx op, int min_val, int max_val);
 extern rtx  riscv_to_int_mode (rtx);
 extern void riscv_expand_vector_init(rtx target, rtx vals);
 
-extern int  riscv_valid_norm_round_imm_op(rtx norm_oper, rtx round_oper);
+extern int  riscv_valid_norm_round_imm_op(rtx norm_oper, rtx round_oper, int MaxVal);
 extern int  riscv_bit_size_for_clip (HOST_WIDE_INT i);
 extern bool riscv_valid_clip_operands (rtx ux, rtx lx, int sign);
 extern bool riscv_valid_bit_field_imm_operand(rtx x, rtx shift_op, int Set_Mode, int *Size, int *Offset);

@@ -659,13 +659,13 @@
   [(set (match_operand:GPR 0 "register_operand")
 	(mult:GPR (match_operand:GPR 1 "reg_or_0_operand")
 		   (match_operand:GPR 2 "register_operand")))]
-  "(Pulp_Cpu>=PULP_V0) || TARGET_MULDIV || TARGET_MASK_RVSTD || (Pulp_Cpu==PULP_SLIM_DEV)")
+  "(Pulp_Cpu>=PULP_V0) || TARGET_MULDIV || TARGET_MASK_RVSTD || (Pulp_Cpu==PULP_SLIM)")
 
 (define_insn "*mulsi3"
   [(set (match_operand:SI 0 "register_operand" "=r")
 	(mult:SI (match_operand:GPR 1 "register_operand" "r")
 		  (match_operand:GPR2 2 "register_operand" "r")))]
-  "(Pulp_Cpu>=PULP_V0) || TARGET_MULDIV || TARGET_MASK_RVSTD || (Pulp_Cpu==PULP_SLIM_DEV)"
+  "(Pulp_Cpu>=PULP_V0) || TARGET_MULDIV || TARGET_MASK_RVSTD || (Pulp_Cpu==PULP_SLIM)"
   {
 	if (TARGET_64BIT) return "mulw\t%0,%1,%2";
 	else if (Pulp_Cpu) return "p.mul\t%0,%1,%2";
@@ -798,7 +798,7 @@
 		 (any_extend:DI
 		   (match_operand:SI 2 "register_operand" "r"))))
   (clobber (match_scratch:SI 3 "=r"))]
-  "((TARGET_MULDIV||(Pulp_Cpu>=PULP_V2)) && !TARGET_64BIT)"
+  "((TARGET_MULDIV||(Pulp_Cpu>=PULP_V2)||(Pulp_Cpu==PULP_SLIM)) && !TARGET_64BIT)"
 {
   rtx temp = gen_reg_rtx (SImode);
   emit_insn (gen_mulsi3 (temp, operands[1], operands[2]));
@@ -818,7 +818,7 @@
 		     (any_extend:DI
 		       (match_operand:SI 2 "register_operand" "r")))
 	    (const_int 32))))]
-  "((TARGET_MULDIV||(Pulp_Cpu>=PULP_V2)) && !TARGET_64BIT)"
+  "((TARGET_MULDIV||(Pulp_Cpu>=PULP_V2)||(Pulp_Cpu==PULP_SLIM)) && !TARGET_64BIT)"
   {
 	if (Pulp_Cpu) return "p.mulh<u>\t%0,%1,%2";
 	else return "mulh<u>\t%0,%1,%2";
@@ -834,7 +834,7 @@
 		 (sign_extend:DI
 		   (match_operand:SI 2 "register_operand" "r"))))
   (clobber (match_scratch:SI 3 "=r"))]
-  "((TARGET_MULDIV||(Pulp_Cpu>=PULP_V2)) && !TARGET_64BIT)"
+  "((TARGET_MULDIV||(Pulp_Cpu>=PULP_V2)||(Pulp_Cpu==PULP_SLIM)) && !TARGET_64BIT)"
 {
   rtx temp = gen_reg_rtx (SImode);
   emit_insn (gen_mulsi3 (temp, operands[1], operands[2]));
@@ -854,7 +854,7 @@
 		     (sign_extend:DI
 		       (match_operand:SI 2 "register_operand" "r")))
 	    (const_int 32))))]
-  "((TARGET_MULDIV||(Pulp_Cpu>=PULP_V2)) && !TARGET_64BIT)"
+  "((TARGET_MULDIV||(Pulp_Cpu>=PULP_V2)||(Pulp_Cpu==PULP_SLIM)) && !TARGET_64BIT)"
   {
 	if (Pulp_Cpu) return "p.mulhsu\t%0,%1,%1";
 	else return "mulhsu\t%0,%2,%1";
@@ -874,7 +874,7 @@
   [(set (match_operand:SI 0 "register_operand" "=r")
 	(any_div:SI (match_operand:SI 1 "register_operand" "r")
 		  (match_operand:SI 2 "register_operand" "r")))]
-  "(TARGET_MULDIV || (((Pulp_Cpu >= PULP_V2)) && !TARGET_MASK_NOHWDIV))"
+  "(TARGET_MULDIV || (((Pulp_Cpu >= PULP_V2)||(Pulp_Cpu==PULP_SLIM)) && !TARGET_MASK_NOHWDIV))"
   { return TARGET_64BIT ? "div<u>w\t%0,%1,%2" : Pulp_Cpu?"p.div<u>\t%0,%1,%2":"div<u>\t%0,%1,%2"; }
   [(set_attr "type" "idiv")
    (set_attr "mode" "SI")])
@@ -892,7 +892,7 @@
   [(set (match_operand:SI 0 "register_operand" "=r")
 	(any_mod:SI (match_operand:SI 1 "register_operand" "r")
 		  (match_operand:SI 2 "register_operand" "r")))]
-  "(TARGET_MULDIV || (((Pulp_Cpu >= PULP_V2)) && !TARGET_MASK_NOHWDIV))"
+  "(TARGET_MULDIV || (((Pulp_Cpu >= PULP_V2)||(Pulp_Cpu==PULP_SLIM)) && !TARGET_MASK_NOHWDIV))"
   { return TARGET_64BIT ? "rem<u>w\t%0,%1,%2" : Pulp_Cpu?"p.rem<u>\t%0,%1,%2":"rem<u>\t%0,%1,%2"; }
   [(set_attr "type" "idiv")
    (set_attr "mode" "SI")])
@@ -1167,7 +1167,7 @@
         )
    )
   ]
-"((Pulp_Cpu>=PULP_V0 || (Pulp_Cpu==PULP_SLIM_DEV)) && !TARGET_MASK_NOBITOP)"
+"((Pulp_Cpu>=PULP_V0) && !TARGET_MASK_NOBITOP)"
 "p.cnt \t%0,%1\t# count bit set to 1"
 [(set_attr "type" "arith")
  (set_attr "mode" "SI")]
@@ -1178,7 +1178,7 @@
         (clrsb:SI (match_operand:SI 1 "register_operand" "r"))
    )
   ]
-"((Pulp_Cpu>=PULP_V0 || (Pulp_Cpu==PULP_SLIM_DEV)) && !TARGET_MASK_NOBITOP)"
+"((Pulp_Cpu>=PULP_V0) && !TARGET_MASK_NOBITOP)"
 "p.clb \t%0, %1\t # count leading bits, int"
 [(set_attr "type" "arith")
  (set_attr "mode" "SI")]
@@ -1191,7 +1191,7 @@
         )
    )
   ]
-"((Pulp_Cpu>=PULP_V0 || (Pulp_Cpu==PULP_SLIM_DEV)) && !TARGET_MASK_NOBITOP)"
+"((Pulp_Cpu>=PULP_V0) && !TARGET_MASK_NOBITOP)"
 "p.fl1 \t%0,%1\t# position of first set bit from msb"
 [(set_attr "type" "arith")
  (set_attr "mode" "SI")]
@@ -1203,7 +1203,7 @@
         )
    )
   ]
-"((Pulp_Cpu>=PULP_V0 || (Pulp_Cpu==PULP_SLIM_DEV)) && !TARGET_MASK_NOBITOP)"
+"((Pulp_Cpu>=PULP_V0) && !TARGET_MASK_NOBITOP)"
 "
 {
         rtx reg = gen_reg_rtx (SImode);
@@ -1221,7 +1221,7 @@
         )
    )
   ]
-"((Pulp_Cpu>=PULP_V0 || (Pulp_Cpu==PULP_SLIM_DEV)) && !TARGET_MASK_NOBITOP)"
+"((Pulp_Cpu>=PULP_V0) && !TARGET_MASK_NOBITOP)"
 "p.ff1 \t%0,%1\t# position of first set bit from lsb"
 [(set_attr "type" "arith")
  (set_attr "mode" "SI")]
@@ -1232,7 +1232,7 @@
 	(parity:SI (match_operand:SI 1 "register_operand" "r"))
    )
   ]
-"((Pulp_Cpu>=PULP_V0 || (Pulp_Cpu==PULP_SLIM_DEV)) && !TARGET_MASK_NOBITOP)"
+"((Pulp_Cpu>=PULP_V0) && !TARGET_MASK_NOBITOP)"
 "
 {
         emit_insn (gen_popcountsi2(operands[0], operands[1]));
@@ -1312,7 +1312,6 @@
    (set_attr "mode" "SI")]
 )
 
-
 ;; Non standard gcc patterns
 
 (define_insn "mulhhs_si3"
@@ -1358,7 +1357,7 @@
         )
    )
   ]
-  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOMULMACNORMROUND && riscv_valid_norm_round_imm_op(operands[3], NULL))"
+  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOMULMACNORMROUND && riscv_valid_norm_round_imm_op(operands[3], NULL, 31))"
   "p.mulsN \t%0,%1,%2,%3"
   [(set_attr "type" "imul")
    (set_attr "mode" "SI")]
@@ -1377,11 +1376,37 @@
         )
    )
   ]
-  "(!TARGET_MASK_NOMULMACNORMROUND && riscv_valid_norm_round_imm_op(operands[3], operands[4]))"
+  "(!TARGET_MASK_NOMULMACNORMROUND && riscv_valid_norm_round_imm_op(operands[3], operands[4], 31))"
   "p.mulsRN \t%0,%1,%2,%3"
   [(set_attr "type" "imul")
    (set_attr "mode" "SI")]
 )
+
+
+
+(define_insn "mulsRNr_hi3"
+  [(set (match_operand:HI 0 "register_operand" "=r")
+	(truncate:HI
+        	(ashiftrt:SI
+                	(plus:SI
+                        	(mult:SI (sign_extend:SI (match_operand:HI 1 "register_operand" "r"))
+                                 	 (sign_extend:SI (match_operand:HI 2 "register_operand" "r"))
+                        	)
+                        	(match_operand:SI 4 "immediate_operand" "i")
+                	)
+                	(match_operand:SI 3 "immediate_operand" "i")
+        	)
+	)
+   )
+  ]
+  "(!TARGET_MASK_NOMULMACNORMROUND && riscv_valid_norm_round_imm_op(operands[3], operands[4], 15))"
+  "p.mulsRN \t%0,%1,%2,%3"
+  [(set_attr "type" "imul")
+   (set_attr "mode" "SI")]
+)
+
+
+
 
 (define_insn "muluNr_si3"
   [(set (match_operand:SI 0 "register_operand" "=r")
@@ -1393,7 +1418,7 @@
         )
    )
   ]
-  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOMULMACNORMROUND && riscv_valid_norm_round_imm_op(operands[3], NULL))"
+  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOMULMACNORMROUND && riscv_valid_norm_round_imm_op(operands[3], NULL, 31))"
   "p.muluN \t%0,%1,%2,%3"
   [(set_attr "type" "imul")
    (set_attr "mode" "SI")]
@@ -1412,7 +1437,7 @@
         )
    )
   ]
-  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOMULMACNORMROUND && riscv_valid_norm_round_imm_op(operands[3], operands[4]))"
+  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOMULMACNORMROUND && riscv_valid_norm_round_imm_op(operands[3], operands[4], 31))"
   "p.muluRN \t%0,%1,%2,%3"
   [(set_attr "type" "imul")
    (set_attr "mode" "SI")]
@@ -1428,7 +1453,7 @@
         )
    )
   ]
-  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOMULMACNORMROUND && riscv_valid_norm_round_imm_op(operands[3], NULL))"
+  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOMULMACNORMROUND && riscv_valid_norm_round_imm_op(operands[3], NULL, 31))"
   "p.mulhhsN \t%0,%1,%2,%3"
   [(set_attr "type" "imul")
    (set_attr "mode" "SI")]
@@ -1444,7 +1469,7 @@
         )
    )
   ]
-  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOMULMACNORMROUND && riscv_valid_norm_round_imm_op(operands[3], NULL))"
+  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOMULMACNORMROUND && riscv_valid_norm_round_imm_op(operands[3], NULL, 31))"
   "p.mulhhuN \t%0,%1,%2,%3"
   [(set_attr "type" "imul")
    (set_attr "mode" "SI")]
@@ -1463,7 +1488,7 @@
         )
    )
   ]
-  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOMULMACNORMROUND && riscv_valid_norm_round_imm_op(operands[3], operands[4]))"
+  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOMULMACNORMROUND && riscv_valid_norm_round_imm_op(operands[3], operands[4], 31))"
   "p.mulhhsRN \t%0,%1,%2,%3"
   [(set_attr "type" "imul")
    (set_attr "mode" "SI")]
@@ -1482,7 +1507,7 @@
         )
    )
   ]
-  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOMULMACNORMROUND && riscv_valid_norm_round_imm_op(operands[3], operands[4]))"
+  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOMULMACNORMROUND && riscv_valid_norm_round_imm_op(operands[3], operands[4], 31))"
   "p.mulhhuRN \t%0,%1,%2,%3"
   [(set_attr "type" "imul")
    (set_attr "mode" "SI")]
@@ -1631,7 +1656,7 @@
         )
    )
   ]
-  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOMULMACNORMROUND && riscv_valid_norm_round_imm_op(operands[4], NULL))"
+  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOMULMACNORMROUND && riscv_valid_norm_round_imm_op(operands[4], NULL, 31))"
   "p.macsN \t%0,%1,%2,%4"
   [(set_attr "type" "imul")
    (set_attr "mode" "SI")]
@@ -1650,7 +1675,7 @@
         )
    )
   ]
-  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOMULMACNORMROUND && riscv_valid_norm_round_imm_op(operands[4], NULL))"
+  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOMULMACNORMROUND && riscv_valid_norm_round_imm_op(operands[4], NULL, 31))"
   "p.macuN \t%0,%1,%2,%4"
   [(set_attr "type" "imul")
    (set_attr "mode" "SI")]
@@ -1672,7 +1697,7 @@
         )
    )
   ]
-  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOMULMACNORMROUND && riscv_valid_norm_round_imm_op(operands[4], operands[5]))"
+  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOMULMACNORMROUND && riscv_valid_norm_round_imm_op(operands[4], operands[5], 31))"
   "p.macsRN \t%0,%1,%2,%4"
   [(set_attr "type" "imul")
    (set_attr "mode" "SI")]
@@ -1694,7 +1719,7 @@
         )
    )
   ]
-  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOMULMACNORMROUND && riscv_valid_norm_round_imm_op(operands[4], operands[5]))"
+  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOMULMACNORMROUND && riscv_valid_norm_round_imm_op(operands[4], operands[5], 31))"
   "p.macuRN \t%0,%1,%2,%4"
   [(set_attr "type" "imul")
    (set_attr "mode" "SI")]
@@ -1713,7 +1738,7 @@
         )
    )
   ]
-  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOMULMACNORMROUND && riscv_valid_norm_round_imm_op(operands[4], NULL))"
+  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOMULMACNORMROUND && riscv_valid_norm_round_imm_op(operands[4], NULL, 31))"
   "p.machhsN \t%0,%1,%2,%4"
   [(set_attr "type" "imul")
    (set_attr "mode" "SI")]
@@ -1732,7 +1757,7 @@
         )
    )
   ]
-  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOMULMACNORMROUND && riscv_valid_norm_round_imm_op(operands[4], NULL))"
+  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOMULMACNORMROUND && riscv_valid_norm_round_imm_op(operands[4], NULL, 31))"
   "p.machhuN \t%0,%1,%2,%4"
   [(set_attr "type" "imul")
    (set_attr "mode" "SI")]
@@ -1754,7 +1779,7 @@
         )
    )
   ]
-  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOMULMACNORMROUND && riscv_valid_norm_round_imm_op(operands[4], operands[5]))"
+  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOMULMACNORMROUND && riscv_valid_norm_round_imm_op(operands[4], operands[5], 31))"
   "p.machhsRN \t%0,%1,%2,%4"
   [(set_attr "type" "imul")
    (set_attr "mode" "SI")]
@@ -1776,7 +1801,7 @@
         )
    )
   ]
-  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOMULMACNORMROUND && riscv_valid_norm_round_imm_op(operands[4], operands[5]))"
+  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOMULMACNORMROUND && riscv_valid_norm_round_imm_op(operands[4], operands[5], 31))"
   "p.machhuRN \t%0,%1,%2,%4"
   [(set_attr "type" "imul")
    (set_attr "mode" "SI")]
@@ -1840,7 +1865,7 @@
         )
    )
   ]
-  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOADDSUBNORMROUND && riscv_valid_norm_round_imm_op(operands[3], NULL))"
+  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOADDSUBNORMROUND && riscv_valid_norm_round_imm_op(operands[3], NULL, 31))"
   "p.add<norm_sign>N \t%0,%1,%z2,%3"
 [(set_attr "type" "arith")
  (set_attr "mode" "SI")]
@@ -1874,7 +1899,7 @@
         )
    )
   ]
-  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOADDSUBNORMROUND && riscv_valid_norm_round_imm_op(operands[3], NULL))"
+  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOADDSUBNORMROUND && riscv_valid_norm_round_imm_op(operands[3], NULL, 31))"
   "p.sub<norm_sign>N \t%0,%1,%z2,%3"
 [(set_attr "type" "arith")
  (set_attr "mode" "SI")]
@@ -1911,7 +1936,7 @@
         )
    )
   ]
-  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOADDSUBNORMROUND && riscv_valid_norm_round_imm_op(operands[3], operands[4]))"
+  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOADDSUBNORMROUND && riscv_valid_norm_round_imm_op(operands[3], operands[4], 31))"
   "p.add<norm_sign>RN \t%0,%1,%z2,%3"
 [(set_attr "type" "arith")
  (set_attr "mode" "SI")]
@@ -1953,7 +1978,7 @@
         )
    )
   ]
-  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOADDSUBNORMROUND && riscv_valid_norm_round_imm_op(operands[3], operands[4]))"
+  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOADDSUBNORMROUND && riscv_valid_norm_round_imm_op(operands[3], operands[4], 31))"
   "p.sub<norm_sign>RN \t%0,%1,%z2,%3"
 [(set_attr "type" "arith")
  (set_attr "mode" "SI")]
@@ -2099,7 +2124,7 @@
 	)
    )
   ]
-"((Pulp_Cpu>=PULP_V2 || (Pulp_Cpu==PULP_SLIM_DEV)) && !TARGET_MASK_NOBITOP && riscv_valid_bit_field_imm_operand(operands[2], NULL, 0, NULL, NULL))"
+"((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOBITOP && riscv_valid_bit_field_imm_operand(operands[2], NULL, 0, NULL, NULL))"
 {
 	int Offset, Size;
 	rtx xoperands[5];
@@ -2139,7 +2164,7 @@
 	)
    )
   ]
-  "((Pulp_Cpu>=PULP_V2 || (Pulp_Cpu==PULP_SLIM_DEV)) && !TARGET_MASK_NOBITOP)"
+  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOBITOP)"
   "p.bclrr\\t%0,%1,%2 # Bit clear reg"
 [(set_attr "type" "logical")
  (set_attr "mode" "SI")]
@@ -2152,7 +2177,7 @@
 	)
    )
   ]
-"((Pulp_Cpu>=PULP_V2 || (Pulp_Cpu==PULP_SLIM_DEV)) && !TARGET_MASK_NOBITOP && riscv_valid_bit_field_imm_operand(operands[2], NULL, 1, NULL, NULL))"
+"((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOBITOP && riscv_valid_bit_field_imm_operand(operands[2], NULL, 1, NULL, NULL))"
 {
 	int Offset, Size;
 	rtx xoperands[5];
@@ -2190,7 +2215,7 @@
 	)
    )
   ]
-  "((Pulp_Cpu>=PULP_V2 || (Pulp_Cpu==PULP_SLIM_DEV)) && !TARGET_MASK_NOBITOP)"
+  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOBITOP)"
   "p.bsetr\\t%0,%1,%2 # Bit set reg"
 [(set_attr "type" "logical")
  (set_attr "mode" "SI")]
@@ -2201,7 +2226,7 @@
         (sign_extract:SI (match_operand:SI 1 "register_operand" "r")
                          (match_operand:SI 2 "immediate_operand" "i")
                          (match_operand:SI 3 "immediate_operand" "i")))]
-  "((Pulp_Cpu>=PULP_V2 || (Pulp_Cpu==PULP_SLIM_DEV)) && !TARGET_MASK_NOBITOP)"
+  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOBITOP)"
 {
 	operands[2] = GEN_INT(INTVAL(operands[2])-1);
  	return "p.extract \t%0,%1,%2,%3 # Bit extract signed";
@@ -2221,7 +2246,7 @@
 	)
    )
   ]
-  "((Pulp_Cpu>=PULP_V2 || (Pulp_Cpu==PULP_SLIM_DEV)) && !TARGET_MASK_NOBITOP)"
+  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOBITOP)"
   "p.extractr \t%0,%1,%2 # Bit extract signed, arg reg"
   [(set_attr "type" "logical")
    (set_attr "length" "1")]
@@ -2232,7 +2257,7 @@
         (zero_extract:SI (match_operand:SI 1 "register_operand" "r")
                          (match_operand:SI 2 "immediate_operand" "i")
                          (match_operand:SI 3 "immediate_operand" "i")))]
-  "((Pulp_Cpu>=PULP_V2 || (Pulp_Cpu==PULP_SLIM_DEV)) && !TARGET_MASK_NOBITOP)"
+  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOBITOP)"
 {
 	operands[2] = GEN_INT(INTVAL(operands[2])-1);
   	return "p.extractu \t%0,%1,%2,%3 # Bit extract unsigned";
@@ -2251,7 +2276,7 @@
 	)
    )
   ]
-  "((Pulp_Cpu>=PULP_V2 || (Pulp_Cpu==PULP_SLIM_DEV)) && !TARGET_MASK_NOBITOP)"
+  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOBITOP)"
   "p.extractur \t%0,%1,%2 # Bit extract unsigned, reg arg"
 [(set_attr "type" "logical")
  (set_attr "mode" "SI")]
@@ -2264,7 +2289,7 @@
         (match_operand:SI 3 "reg_or_0_operand" "rJ")
    )
   ]
-  "((Pulp_Cpu>=PULP_V2 || (Pulp_Cpu==PULP_SLIM_DEV)) && !TARGET_MASK_NOBITOP)"
+  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOBITOP)"
 {
 	operands[1] = GEN_INT(INTVAL(operands[1])-1);
   	if (operands[3] == CONST0_RTX (GET_MODE (operands[3])))
@@ -2281,7 +2306,7 @@
                         (match_operand:SI 2 "immediate_operand" "i"))
                 (and:SI (match_operand:SI 3 "reg_or_0_operand" "rJ")
                         (match_operand:SI 4 "immediate_operand" "i"))))]
-  "((Pulp_Cpu>=PULP_V2 || (Pulp_Cpu==PULP_SLIM_DEV)) && !TARGET_MASK_NOBITOP) && riscv_bottom_bitmask_p (INTVAL (operands[4]))
+  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOBITOP) && riscv_bottom_bitmask_p (INTVAL (operands[4]))
    && INTVAL(operands[2]) == ~INTVAL(operands[4])"
 {
   int len, pos;
@@ -2302,7 +2327,7 @@
                         (match_operand:SI 2 "immediate_operand" "i"))
                 (and:SI (match_operand:SI 3 "register_operand" "0")
                         (match_operand:SI 4 "immediate_operand" "i"))))]
-  "((Pulp_Cpu>=PULP_V2 || (Pulp_Cpu==PULP_SLIM_DEV)) && !TARGET_MASK_NOBITOP) && riscv_bottom_bitmask_p (INTVAL (operands[2]))
+  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOBITOP) && riscv_bottom_bitmask_p (INTVAL (operands[2]))
    && INTVAL(operands[2]) == ~INTVAL(operands[4])"
 {
   int len, pos;
@@ -2324,7 +2349,7 @@
                 (and:SI (ashift:SI (match_operand:SI 3 "reg_or_0_operand" "rJ")
 			           (match_operand:SI 5 "immediate_operand" "i"))
                         (match_operand:SI 4 "immediate_operand" "i"))))]
-  "((Pulp_Cpu>=PULP_V2 || (Pulp_Cpu==PULP_SLIM_DEV)) && !TARGET_MASK_NOBITOP)
+  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOBITOP)
    && riscv_bitmask (INTVAL (operands[4]), NULL, VOIDmode) == INTVAL (operands[5])
    && INTVAL(operands[2]) == ~INTVAL(operands[4])"
 {
@@ -2347,7 +2372,7 @@
 		    (match_operand:SI 3 "register_operand" "r")] UNSPEC_BINS_REG)
    )
   ]
-  "((Pulp_Cpu>=PULP_V2 || (Pulp_Cpu==PULP_SLIM_DEV)) && !TARGET_MASK_NOBITOP)"
+  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOBITOP)"
 {
   	if (operands[2] == CONST0_RTX (GET_MODE (operands[2])))
   		return "p.insertr\t%0,x0,%3";
@@ -2364,7 +2389,7 @@
                         (match_operand:SI 4 "immediate_operand" "i"))
 	 	(and:SI (match_operand:SI 1 "register_operand" "0")
                         (match_operand:SI 2 "immediate_operand" "i"))))]
-  "((Pulp_Cpu>=PULP_V2 || (Pulp_Cpu==PULP_SLIM_DEV)) && !TARGET_MASK_NOBITOP)
+  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOBITOP)
    && riscv_bitmask (INTVAL (operands[4]), NULL, VOIDmode) == INTVAL (operands[5])
    && INTVAL(operands[2]) == ~INTVAL(operands[4])"
 {
@@ -2385,7 +2410,7 @@
                         (match_operand:SI 2 "immediate_operand" "i"))
                 (ashift:SI (match_operand:SI 3 "reg_or_0_operand" "rJ")
 			   (match_operand:SI 4 "immediate_operand" "i"))))]
-  "((Pulp_Cpu>=PULP_V2 || (Pulp_Cpu==PULP_SLIM_DEV)) && !TARGET_MASK_NOBITOP) && riscv_bitmask_ins_p (INTVAL (operands[2]), INTVAL (operands[4]), SImode)"
+  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOBITOP) && riscv_bitmask_ins_p (INTVAL (operands[2]), INTVAL (operands[4]), SImode)"
 {
   int len;
   riscv_bitmask (~INTVAL (operands[2]), &len, SImode);
@@ -2404,7 +2429,7 @@
 			   (match_operand:SI 4 "immediate_operand" "i"))
 		(and:SI (match_operand:SI 1 "register_operand" "0")
                         (match_operand:SI 2 "immediate_operand" "i"))))]
-  "((Pulp_Cpu>=PULP_V2 || (Pulp_Cpu==PULP_SLIM_DEV)) && !TARGET_MASK_NOBITOP) && riscv_bitmask_ins_p (INTVAL (operands[2]), INTVAL (operands[4]), SImode)"
+  "((Pulp_Cpu>=PULP_V2) && !TARGET_MASK_NOBITOP) && riscv_bitmask_ins_p (INTVAL (operands[2]), INTVAL (operands[4]), SImode)"
 {
   int len;
   riscv_bitmask (~INTVAL (operands[2]), &len, SImode);
@@ -3059,7 +3084,7 @@
 	(unspec:SI [(match_operand:SI 1 "immediate_operand" "L")] UNSPEC_SPR_READ)
    )
   ]
- "(Pulp_Cpu>=PULP_V2)"
+ "(Pulp_Cpu>=PULP_V2 || (Pulp_Cpu==PULP_SLIM))"
   "csrrs \t%0,%1,x0\t# SPR read"
   [(set_attr "type" "load")
    (set_attr "mode" "SI")]
@@ -3070,7 +3095,7 @@
 	(unspec_volatile:SI [(match_operand:SI 1 "immediate_operand" "L")] UNSPEC_SPR_READ_VOL)
    )
   ]
- "(Pulp_Cpu>=PULP_V2)"
+ "(Pulp_Cpu>=PULP_V2 || (Pulp_Cpu==PULP_SLIM))"
   "csrrs \t%0,%1,x0\t# SPR read, volatile"
   [(set_attr "type" "load")
    (set_attr "mode" "SI")]
@@ -3079,7 +3104,7 @@
 (define_insn "write_spr"
   [(unspec_volatile [(match_operand:SI 0 "immediate_operand" "L,L") (match_operand:SI 1 "nonmemory_operand" "r,K")] UNSPEC_SPR_WRITE)
   ]
- "(Pulp_Cpu>=PULP_V2)"
+ "(Pulp_Cpu>=PULP_V2 || (Pulp_Cpu==PULP_SLIM))"
  "@
   csrrw \tx0,%0,%1\t# SPR write
   csrrwi \tx0,%0,%1\t# SPR write uimm5"
@@ -3090,7 +3115,7 @@
 	(unspec_volatile [(match_operand:SI 1 "immediate_operand" "L,L") (match_operand:SI 2 "nonmemory_operand" "r,K")] UNSPEC_SPR_WRITE)
    )
   ]
- "(Pulp_Cpu>=PULP_V2)"
+ "(Pulp_Cpu>=PULP_V2 || (Pulp_Cpu==PULP_SLIM))"
  "@
   csrrw \t%0,%1,%2\t# SPR read then write
   csrrwi \t%0,%1,%2\t# SPR read then write uimm5"
@@ -3099,7 +3124,7 @@
 (define_insn "spr_bit_set"
   [(unspec_volatile [(match_operand:SI 0 "immediate_operand" "L,L") (match_operand:SI 1 "nonmemory_operand" "r,K")] UNSPEC_SPR_BIT_SET)
   ]
- "(Pulp_Cpu>=PULP_V2)"
+ "(Pulp_Cpu>=PULP_V2 || (Pulp_Cpu==PULP_SLIM))"
   "@
   csrrs \tx0,%0,%1\t# SPR bit set
   csrrsi \tx0,%0,%1\t# SPR bit set uimm5"
@@ -3110,7 +3135,7 @@
 	(unspec_volatile [(match_operand:SI 1 "immediate_operand" "L,L") (match_operand:SI 2 "nonmemory_operand" "r,K")] UNSPEC_SPR_BIT_SET)
    )
   ]
- "(Pulp_Cpu>=PULP_V2)"
+ "(Pulp_Cpu>=PULP_V2 || (Pulp_Cpu==PULP_SLIM))"
   "@
   csrrs \t%0,%1,%2\t# Read then SPR bit set
   csrrsi \t%0,%1,%2\t# Read then SPR bit set uimm5"
@@ -3119,7 +3144,7 @@
 (define_insn "spr_bit_clr"
   [(unspec_volatile [(match_operand:SI 0 "immediate_operand" "L,L") (match_operand:SI 1 "nonmemory_operand" "r,K")] UNSPEC_SPR_BIT_CLR)
   ]
- "(Pulp_Cpu>=PULP_V2)"
+ "(Pulp_Cpu>=PULP_V2 || (Pulp_Cpu==PULP_SLIM))"
   "@
   csrrc \tx0,%0,%1\t# SPR bit clr
   csrrci \tx0,%0,%1\t# SPR bit clr uimm5"
@@ -3130,7 +3155,7 @@
 	(unspec_volatile [(match_operand:SI 1 "immediate_operand" "L,L") (match_operand:SI 2 "nonmemory_operand" "r,K")] UNSPEC_SPR_BIT_CLR)
    )
   ]
- "(Pulp_Cpu>=PULP_V2)"
+ "(Pulp_Cpu>=PULP_V2 || (Pulp_Cpu==PULP_SLIM))"
   "@
   csrrc \t%0,%1,%2\t# Read then SPR bit clr
   csrrci \t%0,%1,%2\t# Read then SPR bit clr uimm5"
