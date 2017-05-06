@@ -634,20 +634,20 @@ const struct riscv_opcode riscv_builtin_opcodes[] =
 
 /* Pulp slim */
 
-{"p.mul",      		"Xpulpv2", "d,s,t",  	MATCH_MUL, 				MASK_MUL, 	match_opcode,  	WR_xd|RD_xs1|RD_xs2 },
+{"p.mul",      		"Xpulpslim", "d,s,t",  	MATCH_MUL, 				MASK_MUL, 	match_opcode,  	WR_xd|RD_xs1|RD_xs2 },
 
 /* 32x32 into 64 support */
 
-{"p.mulh",      	"Xpulpv2", "d,s,t",  	MATCH_MULH, 				MASK_MULH, 	match_opcode,  WR_xd|RD_xs1|RD_xs2 },
-{"p.mulhu",     	"Xpulpv2", "d,s,t",  	MATCH_MULHU, 				MASK_MULHU, 	match_opcode,  WR_xd|RD_xs1|RD_xs2 },
-{"p.mulhsu",    	"Xpulpv2", "d,s,t",  	MATCH_MULHSU, 				MASK_MULHSU, 	match_opcode,  WR_xd|RD_xs1|RD_xs2 },
+{"p.mulh",      	"Xpulpslim", "d,s,t",  	MATCH_MULH, 				MASK_MULH, 	match_opcode,  WR_xd|RD_xs1|RD_xs2 },
+{"p.mulhu",     	"Xpulpslim", "d,s,t",  	MATCH_MULHU, 				MASK_MULHU, 	match_opcode,  WR_xd|RD_xs1|RD_xs2 },
+{"p.mulhsu",    	"Xpulpslim", "d,s,t",  	MATCH_MULHSU, 				MASK_MULHSU, 	match_opcode,  WR_xd|RD_xs1|RD_xs2 },
 
 /* 32 bit div and rem */
 
-{"p.div",      		"Xpulpv2",   "d,s,t",  	MATCH_DIV, 				MASK_DIV, 	match_opcode,  WR_xd|RD_xs1|RD_xs2 },
-{"p.divu",     		"Xpulpv2",   "d,s,t",  	MATCH_DIVU, 				MASK_DIVU, 	match_opcode,  WR_xd|RD_xs1|RD_xs2 },
-{"p.rem",      		"Xpulpv2",   "d,s,t",  	MATCH_REM, 				MASK_REM, 	match_opcode,  WR_xd|RD_xs1|RD_xs2 },
-{"p.remu",     		"Xpulpv2",   "d,s,t",  	MATCH_REMU,				MASK_REMU, 	match_opcode,  WR_xd|RD_xs1|RD_xs2 },
+{"p.div",      		"Xpulpslim", "d,s,t", 	MATCH_DIV, 				MASK_DIV, 	match_opcode,  WR_xd|RD_xs1|RD_xs2 },
+{"p.divu",     		"Xpulpslim", "d,s,t", 	MATCH_DIVU, 				MASK_DIVU, 	match_opcode,  WR_xd|RD_xs1|RD_xs2 },
+{"p.rem",      		"Xpulpslim", "d,s,t", 	MATCH_REM, 				MASK_REM, 	match_opcode,  WR_xd|RD_xs1|RD_xs2 },
+{"p.remu",     		"Xpulpslim", "d,s,t", 	MATCH_REMU,				MASK_REMU, 	match_opcode,  WR_xd|RD_xs1|RD_xs2 },
 
 /* Load from event unit */
 

@@ -4771,7 +4771,7 @@ riscv_builtin_avail_pulp_v3 (void)
 static unsigned int
 riscv_builtin_avail_pulp_vall (void)
 {
-  if (Pulp_Cpu>=PULP_V0) return 1;
+  if (Pulp_Cpu>=PULP_V0 || Pulp_Cpu==PULP_SLIM) return 1;
   return 0;
 }
 
