@@ -576,7 +576,7 @@ bfd_boolean InsertExportEntry(const char *Name)
   		struct bfd_link_hash_entry *h;
 		PtEntry = (PulpExportEntry *) bfd_malloc (sizeof (PulpExportEntry));
 		if (PtEntry == NULL) return FALSE;
-		PtEntry->Name = (char *) bfd_malloc (sizeof (char) * strlen(Name));
+		PtEntry->Name = (char *) bfd_malloc (sizeof (char) * (strlen(Name)+1));
 		if (PtEntry->Name == NULL) return FALSE;
 		strcpy(PtEntry->Name, Name);
 		PtEntry->Address = 0; PtEntry->Next = NULL;
@@ -645,7 +645,7 @@ static bfd_boolean InsertImportEntry(const char *Name, Elf_Internal_Rela *Rel, b
 	if (PtEntry == NULL) {
 		PtEntry = (PulpImportEntry *) bfd_malloc (sizeof (PulpImportEntry));
 		if (PtEntry == NULL) return FALSE;
-		PtEntry->Name = (char *) bfd_malloc (sizeof (char) * strlen(Name));
+		PtEntry->Name = (char *) bfd_malloc (sizeof (char) * (strlen(Name)+1));
 		if (PtEntry->Name == NULL) return FALSE;
 		strcpy(PtEntry->Name, Name);
 		PtEntry->Ref = NULL; PtEntry->Next = NULL;
