@@ -26,7 +26,7 @@ fragment <<EOF
 #include "elfxx-riscv.h"
 
 #define _WITH_PULP_CHIP_INFO_FUNCT_
-#include "../../../gcc/gcc/config/riscv/riscv-opts.h"
+#include "../../src/gcc/gcc/config/riscv/riscv-opts.h"
 
 static int TRACE = 0;
 
