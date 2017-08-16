@@ -3,10 +3,10 @@ builddir := @abs_top_builddir@
 INSTALL_DIR := @prefix@
 
 PACKAGES := binutils gcc glibc newlib
-gcc_version := 5.2.0
+gcc_version := 5.4.0
 binutils_version := 2.25
 glibc_version := 2.22
-newlib_version := 2.2.0
+newlib_version := 2.2.0-1
 
 DISTDIR ?= /var/cache/distfiles
 GNU_MIRROR := http://mirrors.kernel.org/gnu
