@@ -89,7 +89,7 @@ AC_SUBST(glibc_configure_flags,--without-fp)])
 
 AC_ARG_ENABLE(multilib,
 	[AS_HELP_STRING([--enable-multilib],
-		[build both RV32 and RV64 runtime libraries @<:@--disable-multilib@:>@])],
+		[build runtime libraries for all pulp variants@<:@--disable-multilib@:>@])],
 	[],
 	[enable_multilib=no]
 	)

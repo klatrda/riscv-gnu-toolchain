@@ -1,3 +1,43 @@
+RISC-V GNU Toolchain for PULP
+=============================
+
+# Introduction
+
+This is a port of the RISCV GCC toolchain, which has been extended
+to support the extensions of the Pulpino core.
+
+# Build
+
+Run the following command to build the toolchain
+
+```
+    mkdir build && cd build
+    ../riscv-gnu-toolchain/configure --with-xlen=32 --with-arch=IM \
+           --disable-atomic --enable-multilib  --prefix=`pwd`/install
+    make
+```
+
+This will download a specific version of the RISCV toolchain based on gcc 5.4.0,
+patch it with extensions for Pulpino and compile it.
+
+The resulting toolchains should be in the install directory.
+
+# Supported cores
+
+This toolchain have multilib support for the following cores:
+
+- pulp:       -march=IMCXpulpslim
+- riscy:      -march=IMCXpulpv2
+- riscy+fpu:  -march=IMFDCXpulpv2 -mhard-float
+- zeroriscy:  -march=IMC
+- microriscy: -march=IEC
+
+
+
+
+(The original RISC-V readme follows)
+
+
 RISC-V GNU Compiler Toolchain
 =============================
 

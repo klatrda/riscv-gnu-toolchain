@@ -1,2 +1,2 @@
-HOST_LIBGCC2_CFLAGS += -m32
+HOST_LIBGCC2_CFLAGS += -m32 -ffunction-sections
 CRTSTUFF_CFLAGS += -m32

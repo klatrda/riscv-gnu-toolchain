@@ -1,4 +1,39 @@
-# Build the libraries for both hard and soft floating point
+#
+# pulp-platform multilib configuration
+#
 
-MULTILIB_OPTIONS = msoft-float m64/m32 mno-atomic
-MULTILIB_DIRNAMES = soft-float 64 32 no-atomic
+MULTILIB_OPTIONS  = march=RV32IMXpulpslim/march=RV32IMXpulpv2/march=RV32IMFDXpulpv2/march=RV32IM/march=RV32IE/march=RV32IMCXpulpslim/march=RV32IMCXpulpv2/march=RV32IMFDCXpulpv2/march=RV32IMC/march=RV32IEC
+MULTILIB_OPTIONS += mhard-float
+
+MULTILIB_DIRNAMES  = pulp riscy riscyfpu zeroriscy microriscy
+MULTILIB_DIRNAMES += pulp-c riscy-c riscyfpu-c zeroriscy-c microriscy-c
+MULTILIB_DIRNAMES += hardfloat
+
+MULTILIB_REQUIRED  = march=RV32IMCXpulpslim             # pulp
+MULTILIB_REQUIRED += march=RV32IMCXpulpv2               # riscy
+MULTILIB_REQUIRED += march=RV32IMFDCXpulpv2/mhard-float # riscyfpu
+MULTILIB_REQUIRED += march=RV32IMC                      # zeroriscy
+MULTILIB_REQUIRED += march=RV32IEC                      # microriscy
+
+# Compile libs with function-sections and default to soft-float
+MULTILIB_EXTRA_OPTS = ffunction-sections msoft-float
+
+# Non RVC still link to RVC libs
+MULTILIB_REUSE  = march.RV32IMCXpulpslim=march.RV32IMXpulpslim
+MULTILIB_REUSE += march.RV32IMCXpulpv2=march.RV32IMXpulpv2
+MULTILIB_REUSE += march.RV32IMFDCXpulpv2=march.RV32IMFDXpulpv2
+MULTILIB_REUSE += march.RV32IMC=march.RV32IM
+MULTILIB_REUSE += march.RV32IEC=march.RV32IE
+
+# Non RVC still link to RVC libs
+MULTILIB_MATCHES  = march?RV32IMXpulpslim=march?IMXpulpslim
+MULTILIB_MATCHES += march?RV32IMXpulpv2=march?IMXpulpv2
+MULTILIB_MATCHES += march?RV32IMFDXpulpv2=march?IMFDXpulpv2
+MULTILIB_MATCHES += march?RV32IM=march?IM
+MULTILIB_MATCHES += march?RV32IE=march?IE
+MULTILIB_MATCHES += march?RV32IMCXpulpslim=march?IMCXpulpslim
+MULTILIB_MATCHES += march?RV32IMCXpulpv2=march?IMCXpulpv2
+MULTILIB_MATCHES += march?RV32IMFDCXpulpv2=march?IMFDCXpulpv2
+MULTILIB_MATCHES += march?RV32IMC=march?IMC
+MULTILIB_MATCHES += march?RV32IEC=march?IEC
+
