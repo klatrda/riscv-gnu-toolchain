@@ -134,6 +134,7 @@ static enum Pulp_Processor_Type PulpDecodeCpu(const char *Text, int *Len)
 	int i;
 
 	for (i = 0; Dup[i]; i++) Dup[i] = TOLOWER (Dup[i]);
+
         if      (strncmp (Dup, "none", 4) == 0)   { free(Dup); if (Len) *Len = 4; return PULP_NONE; }
         else if (strncmp (Dup, "riscv", 5) == 0)  { free(Dup); if (Len) *Len = 5; return PULP_RISCV; }
         else if (strncmp (Dup, "pulpv0", 6) == 0) { free(Dup); if (Len) *Len = 6; return PULP_V0; }
@@ -147,21 +148,21 @@ static enum Pulp_Processor_Type PulpDecodeCpu(const char *Text, int *Len)
 static int ExtractChipInfo(const char *Text, struct Pulp_Target_Chip *ChipInfo)
 
 {
-        char *Pos;
+        const char *Pos;
 
-	Pos = strstr((char *) Text, "chip=");
+	Pos = strstr(Text, "chip=");
         if (Pos != NULL ) ChipInfo->chip = PulpDecodeChip(Pos+5); else return 0;
-        Pos = strstr((char *) Text, "cpu=");
+        Pos = strstr(Text, "cpu=");
 	if (Pos != NULL) ChipInfo->processor = PulpDecodeCpu(Pos+4, NULL); else return 0;
-        Pos = strstr((char *) Text, "pe=");
+        Pos = strstr(Text, "pe=");
 	if (Pos!= NULL)  ChipInfo->Pulp_PE = atoi(Pos+3); else return 0;
-        Pos = strstr((char *) Text, "fc=");
+        Pos = strstr(Text, "fc=");
 	if (Pos != NULL) ChipInfo->Pulp_FC = atoi(Pos+3); else return 0;
-        Pos = strstr((char *) Text, "l2=");
+        Pos = strstr(Text, "l2=");
 	if (Pos != NULL) ChipInfo->Pulp_L2_Size = atoi(Pos+3); else return 0;
-        Pos = strstr((char *) Text, "l1cl=");
+        Pos = strstr(Text, "l1cl=");
 	if (Pos != NULL) ChipInfo->Pulp_L1_Cluster_Size = atoi(Pos+5); else return 0;
-        Pos = strstr((char *) Text, "l1fc=");
+        Pos = strstr(Text, "l1fc=");
 	if (Pos != NULL) ChipInfo->Pulp_L1_FC_Size = atoi(Pos+5); else return 0;
 
         return 1;

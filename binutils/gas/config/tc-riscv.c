@@ -206,7 +206,7 @@ riscv_set_arch (const char *arg)
 
 	  if (extension) as_fatal ("only one eXtension is supported (found %s and %s)", extension, subset);
 
-	switch (PulpDecodeCpu(p+1, &Len)) {
+	  switch (PulpDecodeCpu(p+1, &Len)) {
 		case PULP_RISCV:
                 	if (Pulp_Chip.processor == PULP_NONE || Pulp_Chip.processor == PULP_RISCV) Pulp_Chip.processor = PULP_RISCV;
                 	else as_fatal("-Xriscv: pulp architecture is already defined as %s", PulpProcessorImage(Pulp_Chip.processor));
@@ -240,7 +240,7 @@ riscv_set_arch (const char *arg)
 		default:
 			break;
 
-	}
+	  }
 	  extension = subset;
 	  riscv_add_subset (subset);
 	  p += strlen (subset);
