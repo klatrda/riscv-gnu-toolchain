@@ -150,7 +150,7 @@ riscv_set_arch (const char *arg)
 {
   char *uppercase = xstrdup (arg);
   char *p = uppercase;
-  const char *all_subsets = "IMAFDC";
+  const char *all_subsets = "IMAFDEC";
   const char *extension = NULL;
   int rvc = 0;
   int i;

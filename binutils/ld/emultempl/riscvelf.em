@@ -389,7 +389,7 @@ static void ParsePulpArch(const char *arg)
 {
   char *uppercase = xstrdup (arg);
   char *p = uppercase;
-  const char *all_subsets = "IMAFDC";
+  const char *all_subsets = "IMAFDEC";
   int i;
 
   for (i = 0; uppercase[i]; i++) uppercase[i] = TOUPPER (uppercase[i]);
